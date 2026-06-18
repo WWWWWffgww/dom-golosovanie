@@ -103,8 +103,10 @@
   .blabel{margin-top:11px;text-align:center;font-size:13px;color:var(--mut);line-height:1.4}
   .blabel b{color:var(--tx);display:block;font-size:18px;font-family:'Unbounded',sans-serif}
   .total{text-align:center;color:var(--mut);font-size:14.5px;margin-top:10px}
-  .adminlink{text-align:center;margin-top:20px}
-  .adminlink a{color:#5b6473;font-size:12px;text-decoration:none}
+  .adminlink{text-align:center;margin-top:22px}
+  .adminlink a{display:inline-block;color:#cdd3df;font-size:14px;font-weight:600;text-decoration:none;
+    padding:12px 22px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.04)}
+  .adminlink a:active{background:rgba(255,255,255,.1)}
 </style>
 </head>
 <body>
@@ -178,7 +180,7 @@
     <div class="total" id="total">Усього голосів: 0</div>
   </div>
 
-  <div class="adminlink"><a href="admin.html">Адмін-панель</a></div>
+  <div class="adminlink"><a href="admin.html">🔐 Адмін-панель</a></div>
 </div>
 
 <script>
