@@ -51,9 +51,28 @@
   .st-active{background:rgba(34,224,123,.16);color:#9ff0c2}
   .st-pending{background:rgba(255,197,61,.16);color:#ffe39a}
   .st-banned{background:rgba(255,90,95,.16);color:#ffb0b2}
-  .scroll{overflow:auto;max-height:60vh}
+  .scroll{overflow:auto;max-height:60vh;-webkit-overflow-scrolling:touch}
+  .scroll table{min-width:760px}
   a.geo{color:#7dd3fc;text-decoration:none}
   .hide{display:none}
+  /* Адаптив: планшет/телефон */
+  @media(max-width:820px){
+    .stat{gap:10px}
+    .pill{min-width:calc(50% - 5px)}
+  }
+  @media(max-width:560px){
+    body{padding:12px}
+    h1{font-size:18px}
+    h2{font-size:15px}
+    .card{padding:16px;border-radius:14px}
+    .auth{max-width:100%}
+    .pill{min-width:calc(50% - 5px);padding:13px}
+    .pill .n{font-size:23px}
+    .panel-head{flex-direction:column;align-items:stretch !important}
+    .panel-head .row{justify-content:flex-start}
+    .panel-head .row button{flex:1;min-width:0}
+    #meBox{width:100%;margin-bottom:6px}
+  }
 </style>
 </head>
 <body>
@@ -133,7 +152,7 @@
   <!-- ПАНЕЛЬ -->
   <div id="panel" class="hide">
     <div class="card">
-      <div class="row" style="justify-content:space-between">
+      <div class="row panel-head" style="justify-content:space-between">
         <h1 style="margin:0" id="qtitle">Результати</h1>
         <div class="row">
           <span class="mut" id="meBox"></span>
@@ -154,7 +173,9 @@
     <div class="card">
       <h2>Адміністратори</h2>
       <div class="mut" style="margin-bottom:8px">Нові реєстрації неактивні, поки ви їх не підтвердите. Зайвих — банте.</div>
-      <table id="adm"><thead><tr><th>Email</th><th>Статус</th><th>Створено</th><th>Дії</th></tr></thead><tbody></tbody></table>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+        <table id="adm" style="min-width:520px"><thead><tr><th>Email</th><th>Статус</th><th>Створено</th><th>Дії</th></tr></thead><tbody></tbody></table>
+      </div>
     </div>
 
     <div class="card">
