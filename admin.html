@@ -632,7 +632,7 @@ function buildParadeBtns(){
 }
 function renderFiltered(){
   var q=document.getElementById('aptSearch').value.trim();
-  var list = q ? ALL_APTS.filter(function(x){return String(x.apt_no).indexOf(q)>=0;})
+  var list = q ? ALL_APTS.filter(function(x){return String(x.apt_no)===q;})
                : ALL_APTS.filter(function(x){return x.parade===SEL_PARADE;});
   renderApartments(list);
 }
