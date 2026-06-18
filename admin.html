@@ -178,14 +178,40 @@
         <button id="newPollBtn">➕ Нове голосування</button>
       </div>
       <div id="newPollForm" style="display:none;margin-top:12px">
-        <input id="newPollQ" placeholder="Текст питання (напр.: Чи ставимо новий домофон?)">
+        <label style="display:block;font-size:13px;color:var(--mut);margin-bottom:4px">Заголовок</label>
+        <input id="newPollQ" placeholder="Напр.: Чи ставимо новий домофон?">
+
+        <label style="display:block;font-size:13px;color:var(--mut);margin:10px 0 4px">Опис (необов'язково)</label>
+        <textarea id="newPollDesc" rows="3" placeholder="Деталі, умови, навіщо це голосування…" style="width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--line);background:#0e1015;color:var(--tx);font-size:15px;font-family:inherit;resize:vertical"></textarea>
+
+        <label style="display:block;font-size:13px;color:var(--mut);margin:10px 0 4px">Варіанти відповідей</label>
+        <div class="row" id="optPreset" style="margin-bottom:6px">
+          <button class="tiny alt" data-opts="Так|Ні|Утримався">Так / Ні / Утримався</button>
+          <button class="tiny alt" data-opts="Так|Ні">Так / Ні</button>
+          <button class="tiny alt" data-opts="За|Проти|Утримався">За / Проти / Утримався</button>
+        </div>
+        <textarea id="newPollOpts" rows="3" placeholder="Кожен варіант — з нового рядка (від 2 до 8)" style="width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--line);background:#0e1015;color:var(--tx);font-size:15px;font-family:inherit;resize:vertical">Так
+Ні
+Утримався</textarea>
+
+        <label style="display:block;font-size:13px;color:var(--mut);margin:10px 0 4px">Тривалість</label>
+        <select id="newPollDur" style="width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--line);background:#0e1015;color:var(--tx);font-size:15px;font-family:inherit">
+          <option value="0">Без обмеження (закрию вручну)</option>
+          <option value="1">1 день</option>
+          <option value="3">3 дні</option>
+          <option value="7" selected>7 днів</option>
+          <option value="14">14 днів</option>
+          <option value="30">30 днів</option>
+        </select>
+        <div class="mut" style="margin-top:4px">Після завершення результат автоматично публікується в Telegram (якщо налаштовано).</div>
+
         <div class="mut" style="margin:10px 0 6px">Режим голосування:</div>
         <div class="row" id="modePick">
           <button class="modebtn" data-m="identified">👤 Іменне (ПІБ + телефон)</button>
           <button class="modebtn alt" data-m="code">🕵️ Анонімне за кодом</button>
         </div>
         <div class="mut" id="modeHint" style="margin-top:6px">Іменне: видно хто і як проголосував.</div>
-        <div class="row" style="margin-top:10px">
+        <div class="row" style="margin-top:12px">
           <button id="createPollBtn">Створити (зробити активним)</button>
           <button class="alt" id="cancelPollBtn">Скасувати</button>
         </div>
@@ -194,6 +220,21 @@
       <div style="overflow-x:auto;margin-top:12px">
         <table id="pollsTbl" class="resp" style="min-width:520px"><thead><tr><th>Питання</th><th>Статус</th><th>Голосів</th><th>Дії</th></tr></thead><tbody></tbody></table>
       </div>
+    </div>
+
+    <!-- НАЛАШТУВАННЯ TELEGRAM -->
+    <div class="card">
+      <h2 style="margin:0 0 4px">📢 Telegram</h2>
+      <div class="mut" style="margin-bottom:10px">Куди публікувати результати. Створіть бота в <b>@BotFather</b>, додайте його адміністратором у свій канал.</div>
+      <label style="display:block;font-size:13px;color:var(--mut);margin-bottom:4px">Токен бота</label>
+      <input id="tgToken" type="password" placeholder="напр. 123456:ABC-DEF...">
+      <label style="display:block;font-size:13px;color:var(--mut);margin:10px 0 4px">Канал (@username або chat_id)</label>
+      <input id="tgChannel" placeholder="напр. @metrobudivnyk3">
+      <div class="row" style="margin-top:12px">
+        <button id="tgSave">Зберегти</button>
+        <button class="alt" id="tgTest">Надіслати тест</button>
+      </div>
+      <div class="msg" id="tgMsg"></div>
     </div>
 
     <div class="card">
@@ -208,12 +249,7 @@
           <button class="alt" id="logout">Вийти</button>
         </div>
       </div>
-      <div class="stat">
-        <div class="pill y"><div class="n" id="s-yes">0</div><div class="l">Так (готові здати)</div></div>
-        <div class="pill n2"><div class="n" id="s-no">0</div><div class="l">Ні</div></div>
-        <div class="pill a"><div class="n" id="s-ab">0</div><div class="l">Утримався</div></div>
-        <div class="pill"><div class="n" id="s-tot">0</div><div class="l">Усього голосів</div></div>
-      </div>
+      <div class="stat" id="stat"></div>
     </div>
 
     <div class="card">
@@ -424,14 +460,14 @@ document.getElementById('refresh').onclick=function(){ if(DATA&&DATA.poll) selec
 function loadPanel(){
   api('admin_polls',{token:token()}).then(function(r){
     if(!r.ok){ setToken(''); route(); return; }
-    show('panel'); renderPolls(r.polls); loadAdmins(); loadApartments();
+    show('panel'); renderPolls(r.polls); loadAdmins(); loadApartments(); loadTgSettings();
     var act=r.polls.filter(function(p){return p.status==='active';})[0] || r.polls[0];
     if(act){ selectPoll(act.id); }
     else { DATA=null; document.getElementById('qtitle').textContent='Немає голосувань — створіть нове'; clearStats(); }
   });
 }
 function loadPolls(){ api('admin_polls',{token:token()}).then(function(r){ if(r.ok) renderPolls(r.polls); }); }
-function clearStats(){ ['s-yes','s-no','s-ab','s-tot'].forEach(function(i){document.getElementById(i).textContent='0';}); document.querySelector('#tbl tbody').innerHTML=''; }
+function clearStats(){ document.getElementById('stat').innerHTML=''; document.querySelector('#tbl tbody').innerHTML=''; }
 
 function renderPolls(polls){
   var tb=document.querySelector('#pollsTbl tbody'); tb.innerHTML='';
@@ -477,21 +513,41 @@ document.querySelectorAll('#modePick .modebtn').forEach(function(b){
       ? 'Анонімне: видно лише ЯКІ квартири проголосували, але НЕ як саме. Голосують за номером квартири + код.'
       : 'Іменне: видно хто і як проголосував (ПІБ, телефон).'; };
 });
+document.querySelectorAll('#optPreset button').forEach(function(b){
+  b.onclick=function(){ document.getElementById('newPollOpts').value=b.dataset.opts.split('|').join('\n'); };
+});
 document.getElementById('createPollBtn').onclick=function(){
   var q=document.getElementById('newPollQ').value.trim();
-  if(q.length<5){ setMsg('pollMsg','Введіть питання (мін. 5 символів)','err'); return; }
+  var desc=document.getElementById('newPollDesc').value.trim();
+  var opts=document.getElementById('newPollOpts').value.split('\n').map(function(s){return s.trim();}).filter(Boolean);
+  var dur=parseInt(document.getElementById('newPollDur').value,10)||0;
+  if(q.length<5){ setMsg('pollMsg','Введіть заголовок (мін. 5 символів)','err'); return; }
+  if(opts.length<2){ setMsg('pollMsg','Потрібно щонайменше 2 варіанти відповіді','err'); return; }
   var b=this; b.disabled=true;
-  api('admin_create_poll',{token:token(),question:q,mode:NEW_MODE}).then(function(r){
+  api('admin_create_poll',{token:token(),question:q,description:desc,options:opts,durationDays:dur,mode:NEW_MODE}).then(function(r){
     b.disabled=false;
     if(!r.ok){ setMsg('pollMsg',r.error||'Помилка','err'); return; }
     document.getElementById('newPollForm').style.display='none';
     loadPolls(); selectPoll(r.id);
   });
 };
+var PAL=['#22e07b','#ff5a5f','#ffc53d','#3b82f6','#a479e2','#ff8a3d','#2aabee','#f06292'];
+function optLabel(opts,c){ var i=parseInt(c,10); return (opts&&opts[i]!=null)?opts[i]:c; }
+function renderStat(opts,t){
+  var s=document.getElementById('stat'); s.innerHTML='';
+  (opts||[]).forEach(function(o,i){
+    var c=(t.by&&t.by[String(i)])||0;
+    var pill=document.createElement('div'); pill.className='pill';
+    pill.innerHTML='<div class="n" style="color:'+PAL[i%PAL.length]+'">'+c+'</div><div class="l">'+esc(o)+'</div>';
+    s.appendChild(pill);
+  });
+  var tot=document.createElement('div'); tot.className='pill';
+  tot.innerHTML='<div class="n">'+(t.total||0)+'</div><div class="l">Усього голосів</div>';
+  s.appendChild(tot);
+}
 function renderVotes(res){
-  var x=res.results;
-  document.getElementById('s-yes').textContent=x.yes;document.getElementById('s-no').textContent=x.no;
-  document.getElementById('s-ab').textContent=x.abstain;document.getElementById('s-tot').textContent=x.total;
+  var t=res.results||{by:{},total:0}, opts=(res.poll&&res.poll.options)||[];
+  renderStat(opts,t);
   var tb=document.querySelector('#tbl tbody');tb.innerHTML='';
   var head=document.getElementById('tblHead'), note=document.getElementById('votesNote');
 
@@ -510,10 +566,10 @@ function renderVotes(res){
   note.innerHTML='Натисніть на рядок, щоб побачити повну інформацію (IP, місто, GPS, пристрій).';
   res.rows.forEach(function(v,i){
     var gps=(v.lat&&v.lon)?'<a class="geo" target="_blank" href="https://maps.google.com/?q='+v.lat+','+v.lon+'">'+(+v.lat).toFixed(4)+', '+(+v.lon).toFixed(4)+'</a>':'—';
-    var cls=v.choice==='yes'?'t-yes':v.choice==='no'?'t-no':'t-ab';
+    var col=PAL[parseInt(v.choice,10)%PAL.length]||'#888';
     var tr=document.createElement('tr'); tr.className='vrow'; tr.style.cursor='pointer';
     tr.innerHTML='<td data-label="#">'+(i+1)+' <span style="color:var(--mut)">▸</span></td><td data-label="Час">'+fmt(v.time)+'</td><td data-label="Кв.№"><b>'+esc(v.apt)+'</b></td><td data-label="ПІБ">'+esc(v.fio)+'</td><td data-label="Телефон">'+esc(v.phone)+'</td>'+
-      '<td data-label="Відповідь"><span class="tag '+cls+'">'+(L[v.choice]||v.choice)+'</span></td>';
+      '<td data-label="Відповідь"><span class="tag" style="background:'+col+'33;color:'+col+'">'+esc(optLabel(opts,v.choice))+'</span></td>';
     var det=document.createElement('tr'); det.className='vdetail'; det.style.display='none';
     det.innerHTML='<td colspan="6"><div class="detgrid">'+
       detItem('Розташування',esc(v.place))+detItem('IP',esc(v.ip))+detItem('Місто',esc(v.ipCity))+
@@ -644,10 +700,8 @@ function pdfShort(){
       '<div style="font-size:14px;color:#64748b;">'+today()+'</div></div>'+
     '<div style="font-size:24px;font-weight:700;margin:30px 0 4px;">'+esc((DATA.poll&&DATA.poll.question)||'Голосування')+'</div>'+
     '<div style="font-size:15px;color:#64748b;margin-bottom:30px;">Результати голосування</div>'+
-    '<div style="display:flex;gap:22px;">'+
-      col(r.yes,'Так',  '#16a34a',pct(r.yes,r.total))+
-      col(r.no, 'Ні',   '#dc2626',pct(r.no,r.total))+
-      col(r.abstain,'Утримався','#d97706',pct(r.abstain,r.total))+
+    '<div style="display:flex;gap:18px;flex-wrap:wrap;">'+
+      ((DATA.poll&&DATA.poll.options)||[]).map(function(o,i){ var c=(r.by&&r.by[String(i)])||0; return col(c,esc(o),PAL[i%PAL.length],pct(c,r.total)); }).join('')+
     '</div>'+
     '<div style="margin-top:40px;font-family:Unbounded,Arial;font-weight:700;font-size:26px;text-align:center;">Усього голосів: '+r.total+'</div>'+
     '<div style="margin-top:48px;font-size:12px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:12px;text-align:center;">Голосування мешканців ЖБК «Метробудівник-3»</div>';
@@ -657,7 +711,7 @@ function pdfShort(){
 function pdfFull(){
   var r=DATA.results, el=document.createElement('div');
   var rows=DATA.rows.map(function(x,i){
-    var clr=x.choice==='yes'?'#16a34a':x.choice==='no'?'#dc2626':'#d97706';
+    var clr=PAL[parseInt(x.choice,10)%PAL.length]||'#475569';
     var gps=(x.lat&&x.lon)?((+x.lat).toFixed(4)+', '+(+x.lon).toFixed(4)):'—';
     return '<tr>'+
       '<td style="padding:7px 6px;border-bottom:1px solid #eef2f7;">'+(i+1)+'</td>'+
@@ -665,7 +719,7 @@ function pdfFull(){
       '<td style="padding:7px 6px;border-bottom:1px solid #eef2f7;font-weight:700;">'+esc(x.apt)+'</td>'+
       '<td style="padding:7px 6px;border-bottom:1px solid #eef2f7;">'+esc(x.fio)+'</td>'+
       '<td style="padding:7px 6px;border-bottom:1px solid #eef2f7;">'+esc(x.phone)+'</td>'+
-      '<td style="padding:7px 6px;border-bottom:1px solid #eef2f7;font-weight:700;color:'+clr+';">'+(L[x.choice]||x.choice)+'</td>'+
+      '<td style="padding:7px 6px;border-bottom:1px solid #eef2f7;font-weight:700;color:'+clr+';">'+esc(optLabel((DATA.poll&&DATA.poll.options)||[],x.choice))+'</td>'+
       '<td style="padding:7px 6px;border-bottom:1px solid #eef2f7;">'+esc(x.ip)+'</td>'+
       '<td style="padding:7px 6px;border-bottom:1px solid #eef2f7;">'+esc(x.ipCity)+'</td>'+
       '<td style="padding:7px 6px;border-bottom:1px solid #eef2f7;">'+esc(x.ipCountry)+'</td>'+
@@ -679,10 +733,8 @@ function pdfFull(){
       '<div style="font-size:13px;color:#64748b;">'+today()+'</div></div>'+
     '<div style="font-size:18px;font-weight:700;margin:20px 0 6px;">'+esc((DATA.poll&&DATA.poll.question)||'Голосування')+'</div>'+
     '<div style="font-size:14px;margin-bottom:20px;">'+
-      '<b style="color:#16a34a;">Так: '+r.yes+' ('+pct(r.yes,r.total)+'%)</b>　　'+
-      '<b style="color:#dc2626;">Ні: '+r.no+' ('+pct(r.no,r.total)+'%)</b>　　'+
-      '<b style="color:#d97706;">Утримався: '+r.abstain+' ('+pct(r.abstain,r.total)+'%)</b>　　'+
-      '<b>Усього: '+r.total+'</b></div>'+
+      ((DATA.poll&&DATA.poll.options)||[]).map(function(o,i){ var c=(r.by&&r.by[String(i)])||0; return '<b style="color:'+PAL[i%PAL.length]+';">'+esc(o)+': '+c+' ('+pct(c,r.total)+'%)</b>'; }).join('　　')+
+      '　　<b>Усього: '+r.total+'</b></div>'+
     '<table style="width:100%;border-collapse:collapse;font-size:12px;">'+
       '<thead><tr style="background:#f1f5f9;">'+
         ['#','Час','Кв.№','ПІБ власника','Телефон','Відповідь','IP','Місто','Країна','GPS','Пристрій']
@@ -695,12 +747,9 @@ document.getElementById('pdfFull').onclick=pdfFull;
 
 /* ---------- Публікація в Telegram ---------- */
 function tgPreview(){
-  var r=DATA.results;
-  return 'Голосування ЖБК «Метробудівник-3»\n'+(DATA.question||'')+'\n\n'+
-    '✅ Так: '+r.yes+' ('+pct(r.yes,r.total)+'%)\n'+
-    '❌ Ні: '+r.no+' ('+pct(r.no,r.total)+'%)\n'+
-    '➖ Утримався: '+r.abstain+' ('+pct(r.abstain,r.total)+'%)\n\n'+
-    '👥 Усього голосів: '+r.total;
+  var r=DATA.results, opts=(DATA.poll&&DATA.poll.options)||[];
+  var lines=opts.map(function(o,i){ var c=(r.by&&r.by[String(i)])||0; return '• '+o+': '+c+' ('+pct(c,r.total)+'%)'; }).join('\n');
+  return 'Голосування ЖБК «Метробудівник-3»\n'+((DATA.poll&&DATA.poll.question)||'')+'\n\n'+lines+'\n\n👥 Усього голосів: '+r.total;
 }
 document.getElementById('tgPublish').onclick=function(){
   var b=this;
@@ -712,6 +761,31 @@ document.getElementById('tgPublish').onclick=function(){
     if(res.demo){ alert('🧪 Тестовий режим — реально не надіслано.\nПісля підключення бекенду й бота повідомлення піде в канал. Текст:\n\n'+tgPreview()); return; }
     if(res.ok) alert('✅ Опубліковано в Telegram-канал.');
     else alert('Помилка: '+(res.error||'не вдалося надіслати'));
+  });
+};
+
+/* ---------- Налаштування Telegram ---------- */
+function loadTgSettings(){
+  api('admin_get_settings',{token:token()}).then(function(r){
+    if(!r.ok)return;
+    document.getElementById('tgChannel').value=r.tg_channel||'';
+    document.getElementById('tgToken').placeholder = r.tg_token_set ? '•••••• (токен збережено, введіть новий для заміни)' : 'напр. 123456:ABC-DEF...';
+  });
+}
+document.getElementById('tgSave').onclick=function(){
+  var b=this; b.disabled=true;
+  api('admin_save_settings',{token:token(),tg_token:document.getElementById('tgToken').value.trim(),tg_channel:document.getElementById('tgChannel').value.trim()}).then(function(r){
+    b.disabled=false;
+    if(r.ok){ setMsg('tgMsg','Збережено ✅','ok'); document.getElementById('tgToken').value=''; loadTgSettings(); }
+    else setMsg('tgMsg',r.error||'Помилка','err');
+  });
+};
+document.getElementById('tgTest').onclick=function(){
+  var b=this; b.disabled=true; setMsg('tgMsg','Надсилаємо тест…','info');
+  api('admin_test_telegram',{token:token()}).then(function(r){
+    b.disabled=false;
+    if(r.ok) setMsg('tgMsg','✅ Тест надіслано в канал.','ok');
+    else setMsg('tgMsg','Помилка: '+(r.error||''),'err');
   });
 };
 </script>
