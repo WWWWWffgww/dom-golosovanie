@@ -194,7 +194,8 @@
   <!-- РЕЗУЛЬТАТИ -->
   <div class="card" id="results">
     <div style="font-family:'Unbounded';font-weight:700;font-size:20px;margin-bottom:4px">Результати</div>
-    <div id="resQ" style="font-weight:700;font-size:16px;color:#fff;line-height:1.3;margin-bottom:8px"></div>
+    <div id="resQ" style="font-weight:700;font-size:16px;color:#fff;line-height:1.3;margin-bottom:6px"></div>
+    <div id="resDesc" style="color:#cdd3df;font-size:14px;line-height:1.55;margin-bottom:10px;white-space:pre-wrap"></div>
     <div class="myvote" id="myvote"></div>
     <div id="cdResults" style="display:none;margin-bottom:14px;font-size:13.5px;font-weight:600;color:#ffd9b8;background:rgba(255,138,61,.12);border:1px solid rgba(255,138,61,.3);padding:9px 12px;border-radius:11px"></div>
     <div class="bars" id="bars"></div>
@@ -278,7 +279,7 @@ window.addEventListener('load',function(){
     document.getElementById('ruleQ').textContent=res.poll.question;
     document.getElementById('formQ').textContent=res.poll.question;
     document.getElementById('resQ').textContent=res.poll.question;
-    if(res.poll.description) document.getElementById('formDesc').textContent=res.poll.description;
+    if(res.poll.description){ document.getElementById('formDesc').textContent=res.poll.description; document.getElementById('resDesc').textContent=res.poll.description; }
     buildOptions(res.poll.options||[]);
     if(CURRENT_MODE==='code'){
       document.getElementById('codeWrap').style.display='block';
