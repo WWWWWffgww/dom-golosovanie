@@ -21,6 +21,13 @@ var SHEET_NAME = 'Голоси';
 var ADMIN_SHEET = 'Адміни';
 var QUESTION = 'Чи потрібне нам резервне опалення?';
 var BUILDING = { paradni: 6, poverhy: 10, perFloor: 4 };
+
+// --- Telegram (для публікації результатів у канал) ---
+//   1) Створи бота в @BotFather -> отримай токен -> встав сюди.
+//   2) Додай бота адміністратором у свій канал.
+//   3) TELEGRAM_CHANNEL = '@назва_каналу' (публічний) або числовий chat_id.
+var TELEGRAM_BOT_TOKEN = '';   // напр. '123456:ABC-DEF...'
+var TELEGRAM_CHANNEL   = '';   // напр. '@metrobudivnyk3'
 // ===========================
 
 var MAX_APT = BUILDING.paradni * BUILDING.poverhy * BUILDING.perFloor; // 240
@@ -218,6 +225,11 @@ function handleAdmin_(d){
       return json_({ok:true, admins:list});
     }
 
+    if(a==='admin_publish'){
+      var res=tgSend_(resultsText_(tally_(sheet_())));
+      return res.ok ? json_({ok:true}) : json_({ok:false,error:res.error});
+    }
+
     if(a==='admin_approve'||a==='admin_ban'||a==='admin_unban'){
       var target=adminRow_(d.target);
       if(!target) return json_({ok:false,error:'Адміна не знайдено'});
@@ -231,6 +243,26 @@ function handleAdmin_(d){
     return json_({ok:false,error:'Невідома дія'});
   }catch(err){ return json_({ok:false,error:'Помилка: '+err}); }
   finally{ lock.releaseLock(); }
+}
+
+function resultsText_(r){
+  function p(n){return r.total?Math.round(n/r.total*100):0;}
+  return '<b>Голосування ЖБК «Метробудівник-3»</b>\n'+QUESTION+'\n\n'+
+    '✅ Так: '+r.yes+' ('+p(r.yes)+'%)\n'+
+    '❌ Ні: '+r.no+' ('+p(r.no)+'%)\n'+
+    '➖ Утримався: '+r.abstain+' ('+p(r.abstain)+'%)\n\n'+
+    '👥 Усього голосів: '+r.total;
+}
+function tgSend_(text){
+  if(!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHANNEL)
+    return {ok:false,error:'Telegram не налаштовано (BOT_TOKEN/CHANNEL у Code.gs)'};
+  try{
+    var url='https://api.telegram.org/bot'+TELEGRAM_BOT_TOKEN+'/sendMessage';
+    var res=UrlFetchApp.fetch(url,{method:'post',contentType:'application/json',muteHttpExceptions:true,
+      payload:JSON.stringify({chat_id:TELEGRAM_CHANNEL,text:text,parse_mode:'HTML',disable_web_page_preview:true})});
+    var j=JSON.parse(res.getContentText());
+    return j.ok ? {ok:true} : {ok:false,error:j.description||'Telegram error'};
+  }catch(e){ return {ok:false,error:''+e}; }
 }
 
 function notifyActive_(msg){

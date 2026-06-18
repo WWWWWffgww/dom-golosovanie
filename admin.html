@@ -22,7 +22,8 @@
   label{display:block;font-size:13px;font-weight:600;color:var(--mut);margin:12px 0 6px}
   input{width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--line);background:#0e1015;color:var(--tx);font-size:15px;font-family:inherit;outline:none}
   input:focus{border-color:var(--warm)}
-  button{padding:12px 17px;border:0;border-radius:12px;background:linear-gradient(92deg,var(--warm),var(--warm2));color:#fff;font-weight:700;cursor:pointer;font-size:14px;font-family:inherit}
+  button{padding:12px 17px;border:0;border-radius:12px;background:linear-gradient(92deg,var(--warm),var(--warm2));color:#fff;font-weight:700;cursor:pointer;font-size:14px;font-family:inherit;white-space:nowrap}
+  button.tg{background:linear-gradient(92deg,#2aabee,#229ed9)}
   button.alt{background:#262b35}
   button.tiny{padding:7px 11px;font-size:12.5px;border-radius:9px}
   button.ban{background:#3a2030;color:#ffb0b2}
@@ -69,9 +70,9 @@
     .pill{min-width:calc(50% - 5px);padding:13px}
     .pill .n{font-size:23px}
     .panel-head{flex-direction:column;align-items:stretch !important}
-    .panel-head .row{justify-content:flex-start}
-    .panel-head .row button{flex:1;min-width:0}
-    #meBox{width:100%;margin-bottom:6px}
+    .panel-head .row{justify-content:flex-start;flex-wrap:wrap;gap:8px}
+    .panel-head .row button{padding:10px 13px;font-size:13px}
+    #meBox{width:100%;margin-bottom:4px}
   }
 </style>
 </head>
@@ -159,6 +160,7 @@
           <button class="alt" id="refresh">Оновити</button>
           <button id="pdfShort">PDF · коротко</button>
           <button id="pdfFull">PDF · детально</button>
+          <button class="tg" id="tgPublish">📢 Telegram</button>
           <button class="alt" id="logout">Вийти</button>
         </div>
       </div>
@@ -261,6 +263,7 @@ function demoApi(a,p){
     return {ok:true,question:'Чи потрібне нам резервне опалення?',results:dTally(),me:{email:me.email},
       rows:v.map(function(x){return{time:x._t||'',apt:x.apt,place:x.place,fio:x.fio,phone:x.phone,choice:x.choice,ip:x.ip,ipCity:x.ipCity,ipRegion:x.ipRegion,ipCountry:x.ipCountry,lat:x.lat,lon:x.lon,acc:x.acc,device:x.device,ua:x.ua};})};
   }
+  if(a==='admin_publish') return {ok:true,demo:true};
   if(a==='admin_list') return {ok:true,admins:admins.map(function(x){return{email:x.email,status:x.status,created:x.created,me:dEmail(x.email)===dEmail(me.email)};})};
   if(a==='admin_approve'||a==='admin_ban'||a==='admin_unban'){
     var t=find(p.target); if(!t) return {ok:false,error:'Не знайдено'};
@@ -485,6 +488,27 @@ function pdfFull(){
 }
 document.getElementById('pdfShort').onclick=pdfShort;
 document.getElementById('pdfFull').onclick=pdfFull;
+
+/* ---------- Публікація в Telegram ---------- */
+function tgPreview(){
+  var r=DATA.results;
+  return 'Голосування ЖБК «Метробудівник-3»\n'+(DATA.question||'')+'\n\n'+
+    '✅ Так: '+r.yes+' ('+pct(r.yes,r.total)+'%)\n'+
+    '❌ Ні: '+r.no+' ('+pct(r.no,r.total)+'%)\n'+
+    '➖ Утримався: '+r.abstain+' ('+pct(r.abstain,r.total)+'%)\n\n'+
+    '👥 Усього голосів: '+r.total;
+}
+document.getElementById('tgPublish').onclick=function(){
+  var b=this;
+  if(!confirm('Опублікувати результати в Telegram-канал?\n\n'+tgPreview())) return;
+  b.disabled=true;
+  api('admin_publish',{token:token()}).then(function(res){
+    b.disabled=false;
+    if(res.demo){ alert('🧪 Тестовий режим — реально не надіслано.\nПісля підключення бекенду й бота повідомлення піде в канал. Текст:\n\n'+tgPreview()); return; }
+    if(res.ok) alert('✅ Опубліковано в Telegram-канал.');
+    else alert('Помилка: '+(res.error||'не вдалося надіслати'));
+  });
+};
 </script>
 </body>
 </html>
