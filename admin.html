@@ -58,7 +58,11 @@
   .st-banned{background:rgba(255,90,95,.16);color:#ffb0b2}
   .scroll{overflow:auto;max-height:60vh;-webkit-overflow-scrolling:touch}
   .scroll table{min-width:520px}
-  .aptacts{display:inline-flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .aptacts,.tacts{display:inline-flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+  .iconbtn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:36px;padding:0;border-radius:10px;
+    background:#2c3346;border:1.5px solid rgba(255,255,255,.16);color:#dfe4ee;cursor:pointer;transition:.15s}
+  .iconbtn:active{background:#3a4358}
+  .iconbtn svg{width:18px;height:18px}
   .vrow:hover{background:rgba(255,255,255,.03)}
   .vdetail td{background:rgba(255,138,61,.06);padding:8px 12px}
   .detgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 24px}
@@ -83,7 +87,13 @@
     .panel-head{flex-direction:column;align-items:stretch !important}
     .panel-head .row{justify-content:flex-start;flex-wrap:wrap;gap:8px}
     .panel-head .row button{padding:10px 13px;font-size:13px}
-    #meBox{width:100%;margin-bottom:4px}
+    #meBox{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+    /* хедери карток з кнопками -> у стовпчик */
+    .cardhead{flex-direction:column;align-items:stretch !important;gap:10px}
+    .cardhead .row{justify-content:stretch;flex-wrap:wrap;width:100%}
+    .cardhead .row>button{flex:1}
+    /* кнопки дій у таблицях-картках переносяться, не вилазять */
+    table.resp td .tacts,table.resp td .aptacts{flex:1 1 auto;min-width:0}
     /* таблиці -> картки (без горизонтального скролу) */
     .scroll{overflow:visible;max-height:none}
     table.resp{min-width:0 !important}
@@ -182,9 +192,9 @@
     <div id="listView">
     <!-- ГОЛОСУВАННЯ -->
     <div class="card">
-      <div class="row" style="justify-content:space-between;align-items:center">
+      <div class="row cardhead" style="justify-content:space-between;align-items:center">
         <h2 style="margin:0">Голосування</h2>
-        <button id="newPollBtn">➕ Нове голосування</button>
+        <div class="row"><button id="newPollBtn">➕ Нове голосування</button></div>
       </div>
       <div id="newPollForm" style="display:none;margin-top:12px">
         <label style="display:block;font-size:13px;color:var(--mut);margin-bottom:4px">Заголовок</label>
@@ -267,7 +277,7 @@
 
     <!-- КВАРТИРИ ТА КОДИ -->
     <div class="card">
-      <div class="row" style="justify-content:space-between;align-items:center">
+      <div class="row cardhead" style="justify-content:space-between;align-items:center">
         <h2 style="margin:0">Квартири та коди</h2>
         <div class="row">
           <button class="alt" id="aptCsv">⬇️ Коди (CSV)</button>
@@ -279,7 +289,7 @@
         <button id="aptSeed">Створити реєстр квартир</button>
       </div>
       <div id="aptBody" style="display:none">
-        <input id="aptSearch" inputmode="numeric" placeholder="🔎 Пошук за номером квартири (напр. 12)" style="margin-top:8px">
+        <input id="aptSearch" inputmode="numeric" placeholder="🔎 Пошук: № квартири" style="margin-top:8px">
         <label style="margin-top:12px">Парадне</label>
         <div id="aptParade" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
         <div style="overflow-x:auto">
@@ -504,7 +514,7 @@ function renderPolls(polls){
     if(p.status==='active') act+='<button class="tiny ban" data-close="'+p.id+'">Закрити</button>';
     else if(!p.published) act+='<button class="tiny ok2" data-act="'+p.id+'">Активувати</button>';
     var tr=document.createElement('tr');
-    tr.innerHTML='<td data-label="Питання">'+esc(p.question)+'</td><td data-label="Статус">'+st+'</td><td data-label="Голосів">'+p.total+'</td><td data-label="Дії">'+act+'</td>';
+    tr.innerHTML='<td data-label="Питання">'+esc(p.question)+'</td><td data-label="Статус">'+st+'</td><td data-label="Голосів">'+p.total+'</td><td data-label="Дії"><span class="tacts">'+act+'</span></td>';
     tb.appendChild(tr);
   });
   tb.querySelectorAll('button[data-sel]').forEach(function(b){ b.onclick=function(){selectPoll(+b.dataset.sel);}; });
@@ -658,7 +668,7 @@ function loadAdmins(){
         if(a.status==='banned')act+='<button class="tiny ok2" data-act="admin_unban" data-e="'+esc(a.email)+'">Розбанити</button>';
       }
       var tr=document.createElement('tr');
-      tr.innerHTML='<td data-label="Email">'+esc(a.email)+'</td><td data-label="Статус">'+st+'</td><td data-label="Створено">'+fmt(a.created)+'</td><td data-label="Дії">'+act+'</td>';
+      tr.innerHTML='<td data-label="Email">'+esc(a.email)+'</td><td data-label="Статус">'+st+'</td><td data-label="Створено">'+fmt(a.created)+'</td><td data-label="Дії"><span class="tacts">'+act+'</span></td>';
       tb.appendChild(tr);
     });
     tb.querySelectorAll('button[data-act]').forEach(function(b){
@@ -701,13 +711,16 @@ function renderFiltered(){
   renderApartments(list);
 }
 document.getElementById('aptSearch').addEventListener('input',renderFiltered);
+var IC_COPY='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
+var IC_SHARE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>';
+var IC_CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="#22e07b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>';
 function shareCode(apt,code){
   var text='Код для голосування ЖБК «Метробудівник-3»\nКвартира № '+apt+'\nКод: '+code;
   if(navigator.share){ navigator.share({title:'Код голосування',text:text}).catch(function(){}); }
   else { navigator.clipboard&&navigator.clipboard.writeText(text); alert('Скопійовано (поділитися недоступне у цьому браузері):\n\n'+text); }
 }
 function copyCode(code,btn){
-  if(navigator.clipboard){ navigator.clipboard.writeText(code).then(function(){ var t=btn.textContent; btn.textContent='✓'; setTimeout(function(){btn.textContent=t;},1200); }); }
+  if(navigator.clipboard){ navigator.clipboard.writeText(code).then(function(){ var t=btn.innerHTML; btn.innerHTML=IC_CHECK; setTimeout(function(){btn.innerHTML=t;},1200); }); }
   else { alert('Код: '+code); }
 }
 function renderApartments(list){
@@ -720,9 +733,9 @@ function renderApartments(list){
       '<td data-label="Поверх">'+x.floor+'</td>'+
       '<td data-label="Код"><b class="codeval" style="display:inline-block;background:rgba(34,224,123,.14);color:#9ff0c2;font-size:19px;font-weight:800;letter-spacing:2px;padding:5px 13px;border-radius:9px;border:1px solid rgba(34,224,123,.3)">'+esc(x.code)+'</b></td>'+
       '<td data-label="Оновлено" style="color:var(--mut)">'+(x.code_updated?fmt(x.code_updated):'—')+'</td>'+
-      '<td data-label="Дії"><span class="aptacts">'+
-        '<button class="tiny alt" data-cp="'+esc(x.code)+'" title="Копіювати">📋</button>'+
-        '<button class="tiny alt" data-sh="'+x.apt_no+'~'+esc(x.code)+'" title="Поділитися">📤</button>'+
+      '<td data-label="Дії"><span class="tacts">'+
+        '<button class="iconbtn" data-cp="'+esc(x.code)+'" title="Копіювати код">'+IC_COPY+'</button>'+
+        '<button class="iconbtn" data-sh="'+x.apt_no+'~'+esc(x.code)+'" title="Поділитися">'+IC_SHARE+'</button>'+
         '<button class="tiny ban" data-rg="'+x.id+'">Оновити</button></span></td>';
     tb.appendChild(tr);
   });
