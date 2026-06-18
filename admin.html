@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'self'; form-action 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; connect-src https://script.google.com https://script.googleusercontent.com">
+<meta name="referrer" content="no-referrer">
+<title>Адмін · Голосування ЖБК «Метробудівник-3»</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Unbounded:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  :root{--bg:#0a0b10;--card:#161922;--line:rgba(255,255,255,.08);--tx:#f3f5f9;--mut:#9aa3b5;
+    --green:#22e07b;--red:#ff5a5f;--yellow:#ffc53d;--warm:#ff8a3d;--warm2:#ff4d6d}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tx);font-family:'Manrope',-apple-system,Segoe UI,Roboto,sans-serif;padding:20px}
+  .wrap{max-width:1180px;margin:0 auto}
+  h1{font-family:'Unbounded',sans-serif;font-size:20px;margin:0 0 14px}
+  h2{font-family:'Unbounded',sans-serif;font-size:16px;margin:0 0 12px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;margin-bottom:16px}
+  .auth{max-width:440px}
+  label{display:block;font-size:13px;font-weight:600;color:var(--mut);margin:12px 0 6px}
+  input{width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--line);background:#0e1015;color:var(--tx);font-size:15px;font-family:inherit;outline:none}
+  input:focus{border-color:var(--warm)}
+  button{padding:12px 17px;border:0;border-radius:12px;background:linear-gradient(92deg,var(--warm),var(--warm2));color:#fff;font-weight:700;cursor:pointer;font-size:14px;font-family:inherit}
+  button.alt{background:#262b35}
+  button.tiny{padding:7px 11px;font-size:12.5px;border-radius:9px}
+  button.ban{background:#3a2030;color:#ffb0b2}
+  button.ok2{background:rgba(34,224,123,.18);color:#9ff0c2}
+  .full{width:100%;margin-top:16px;padding:14px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .links{margin-top:14px;display:flex;gap:16px;flex-wrap:wrap}
+  .links a{color:#ffb27a;font-size:13px;text-decoration:none;cursor:pointer}
+  .msg{margin-top:12px;font-size:13.5px;padding:11px 13px;border-radius:11px;display:none}
+  .msg.err{display:block;background:rgba(255,90,95,.13);color:#ffb0b2}
+  .msg.ok{display:block;background:rgba(34,224,123,.13);color:#9ff0c2}
+  .msg.info{display:block;background:rgba(255,197,61,.13);color:#ffe39a}
+  .mut{color:var(--mut);font-size:13px}
+  .back a{color:#ffb27a;text-decoration:none;font-size:14px;font-weight:600}
+  .stat{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px}
+  .pill{flex:1;min-width:140px;border:1px solid var(--line);border-radius:14px;padding:16px}
+  .pill .n{font-size:28px;font-weight:800;font-family:'Unbounded',sans-serif}
+  .pill.y .n{color:var(--green)}.pill.n2 .n{color:var(--red)}.pill.a .n{color:var(--yellow)}
+  .pill .l{color:var(--mut);font-size:13px;margin-top:3px}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+  th,td{border-bottom:1px solid var(--line);padding:9px 7px;text-align:left;vertical-align:middle}
+  th{color:var(--mut);font-weight:600;position:sticky;top:0;background:var(--card)}
+  .tag{padding:3px 9px;border-radius:7px;font-size:12px;font-weight:700;white-space:nowrap}
+  .t-yes{background:rgba(34,224,123,.16);color:#9ff0c2}.t-no{background:rgba(255,90,95,.16);color:#ffb0b2}.t-ab{background:rgba(255,197,61,.16);color:#ffe39a}
+  .st{padding:3px 9px;border-radius:7px;font-size:12px;font-weight:700}
+  .st-active{background:rgba(34,224,123,.16);color:#9ff0c2}
+  .st-pending{background:rgba(255,197,61,.16);color:#ffe39a}
+  .st-banned{background:rgba(255,90,95,.16);color:#ffb0b2}
+  .scroll{overflow:auto;max-height:60vh}
+  a.geo{color:#7dd3fc;text-decoration:none}
+  .hide{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="back" style="margin-bottom:14px"><a href="index.html">← На головну (голосування)</a></div>
+
+  <!-- ПЕРШЕ НАЛАШТУВАННЯ -->
+  <div class="card auth hide" id="scrSetup">
+    <h1>Перше налаштування</h1>
+    <p class="mut" id="setupHint">Адміністратора ще не створено. Створіть головного адміністратора.</p>
+    <label>Код налаштування</label>
+    <input id="suKey" type="password" placeholder="секретний код (SETUP_KEY)">
+    <label>Email адміністратора</label>
+    <input id="suEmail" type="email" placeholder="you@example.com" autocomplete="username">
+    <label>Пароль (мін. 6 символів)</label>
+    <input id="suPw" type="password" autocomplete="new-password">
+    <label>Повторіть пароль</label>
+    <input id="suPw2" type="password" autocomplete="new-password">
+    <button class="full" id="suGo">Створити адміністратора</button>
+    <div class="msg" id="suMsg"></div>
+  </div>
+
+  <!-- ВХІД -->
+  <div class="card auth hide" id="scrLogin">
+    <h1>Вхід до адмін-панелі</h1>
+    <label>Email</label>
+    <input id="liEmail" type="email" placeholder="you@example.com" autocomplete="username">
+    <label>Пароль</label>
+    <input id="liPw" type="password" autocomplete="current-password">
+    <button class="full" id="liGo">Увійти</button>
+    <div class="msg" id="liMsg"></div>
+    <div class="links">
+      <a id="toRegister">Реєстрація адміністратора</a>
+      <a id="toRecover">Забули пароль?</a>
+    </div>
+  </div>
+
+  <!-- РЕЄСТРАЦІЯ -->
+  <div class="card auth hide" id="scrRegister">
+    <h1>Реєстрація адміністратора</h1>
+    <p class="mut">Новий адміністратор стає активним лише після підтвердження головним адміністратором.</p>
+    <label>Email</label>
+    <input id="rgEmail" type="email" placeholder="you@example.com" autocomplete="username">
+    <label>Пароль (мін. 6 символів)</label>
+    <input id="rgPw" type="password" autocomplete="new-password">
+    <label>Повторіть пароль</label>
+    <input id="rgPw2" type="password" autocomplete="new-password">
+    <button class="full" id="rgGo">Зареєструватися</button>
+    <div class="msg" id="rgMsg"></div>
+    <div class="links"><a id="rgBack">← Назад до входу</a></div>
+  </div>
+
+  <!-- ВІДНОВЛЕННЯ 1 -->
+  <div class="card auth hide" id="scrRec1">
+    <h1>Відновлення доступу</h1>
+    <p class="mut">Введіть email — надішлемо код відновлення.</p>
+    <label>Email</label>
+    <input id="rc1Email" type="email" placeholder="you@example.com" autocomplete="username">
+    <button class="full" id="rc1Go">Надіслати код</button>
+    <div class="msg" id="rc1Msg"></div>
+    <div class="links"><a id="rc1Back">← Назад до входу</a></div>
+  </div>
+
+  <!-- ВІДНОВЛЕННЯ 2 -->
+  <div class="card auth hide" id="scrRec2">
+    <h1>Підтвердження коду</h1>
+    <p class="mut">Введіть код із листа та новий пароль.</p>
+    <label>Код із листа</label>
+    <input id="rc2Code" inputmode="numeric" placeholder="6 цифр">
+    <label>Новий пароль (мін. 6 символів)</label>
+    <input id="rc2Pw" type="password" autocomplete="new-password">
+    <button class="full" id="rc2Go">Зберегти новий пароль</button>
+    <div class="msg" id="rc2Msg"></div>
+    <div class="links"><a id="rc2Back">← Назад до входу</a></div>
+  </div>
+
+  <!-- ПАНЕЛЬ -->
+  <div id="panel" class="hide">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h1 style="margin:0" id="qtitle">Результати</h1>
+        <div class="row">
+          <span class="mut" id="meBox"></span>
+          <button class="alt" id="refresh">Оновити</button>
+          <button id="pdfShort">PDF · коротко</button>
+          <button id="pdfFull">PDF · детально</button>
+          <button class="alt" id="logout">Вийти</button>
+        </div>
+      </div>
+      <div class="stat">
+        <div class="pill y"><div class="n" id="s-yes">0</div><div class="l">Так (готові здати)</div></div>
+        <div class="pill n2"><div class="n" id="s-no">0</div><div class="l">Ні</div></div>
+        <div class="pill a"><div class="n" id="s-ab">0</div><div class="l">Утримався</div></div>
+        <div class="pill"><div class="n" id="s-tot">0</div><div class="l">Усього голосів</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Адміністратори</h2>
+      <div class="mut" style="margin-bottom:8px">Нові реєстрації неактивні, поки ви їх не підтвердите. Зайвих — банте.</div>
+      <table id="adm"><thead><tr><th>Email</th><th>Статус</th><th>Створено</th><th>Дії</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div class="card">
+      <h2>Усі голоси (повні дані)</h2>
+      <div class="scroll">
+        <table id="tbl"><thead><tr>
+          <th>#</th><th>Час</th><th>Кв.№</th><th>Розташування</th><th>ПІБ</th><th>Телефон</th><th>Відповідь</th>
+          <th>IP</th><th>Місто</th><th>Країна</th><th>GPS</th><th>Точн.</th><th>Пристрій</th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* === НАЛАШТУВАННЯ: той самий URL, що в index.html === */
+var SCRIPT_URL = 'ВСТАВ_СЮДИ_URL_APPS_SCRIPT';
+/* =================================================== */
+
+var DEMO = SCRIPT_URL.indexOf('ВСТАВ')>=0;
+var DEMO_SETUP_KEY = 'demo';
+var TOK_KEY='dom_admin_tok', L={yes:'Так',no:'Ні',abstain:'Утримався'};
+var DATA=null;
+
+/* ---------- API (реальний бекенд або тестова симуляція) ---------- */
+function api(action,payload){
+  payload=payload||{}; payload.action=action;
+  if(DEMO) return Promise.resolve(demoApi(action,payload));
+  return fetch(SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)})
+    .then(function(r){return r.json();}).catch(function(){return{ok:false,error:'Помилка зʼєднання'};});
+}
+
+/* ---------- Тестова симуляція (localStorage) ---------- */
+function dGet(k,def){try{return JSON.parse(localStorage.getItem(k))||def;}catch(e){return def;}}
+function dSet(k,v){localStorage.setItem(k,JSON.stringify(v));}
+function dAdmins(){return dGet('dom_admins',[]);}
+function dEmail(e){return String(e||'').trim().toLowerCase();}
+function find(e){var a=dAdmins();for(var i=0;i<a.length;i++)if(dEmail(a[i].email)===dEmail(e))return a[i];return null;}
+function dTally(){var v=dGet('dom_demo',[]),r={yes:0,no:0,abstain:0,total:0};v.forEach(function(x){if(r[x.choice]!=null)r[x.choice]++;});r.total=r.yes+r.no+r.abstain;return r;}
+function demoApi(a,p){
+  var email=dEmail(p.email), admins=dAdmins();
+  function find(e){for(var i=0;i<admins.length;i++)if(dEmail(admins[i].email)===dEmail(e))return admins[i];return null;}
+  if(a==='admin_status') return {ok:true,exists:admins.length>0};
+  if(a==='admin_setup'){
+    if(String(p.setupKey||'')!==DEMO_SETUP_KEY) return {ok:false,error:'Невірний код налаштування (тест: demo)'};
+    if(admins.length>0) return {ok:false,error:'Адміністратор вже створений'};
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return {ok:false,error:'Невірний email'};
+    if(String(p.password).length<6) return {ok:false,error:'Пароль мінімум 6 символів'};
+    admins.push({email:email,password:p.password,status:'active',created:new Date().toISOString()});dSet('dom_admins',admins);
+    return {ok:true,token:email,me:{email:email,status:'active'}};
+  }
+  if(a==='admin_register'){
+    if(admins.length===0) return {ok:false,error:'Спочатку перший адміністратор'};
+    if(find(email)) return {ok:false,error:'Такий email вже зареєстрований'};
+    if(String(p.password).length<6) return {ok:false,error:'Пароль мінімум 6 символів'};
+    admins.push({email:email,password:p.password,status:'pending',created:new Date().toISOString()});dSet('dom_admins',admins);
+    return {ok:true,pending:true};
+  }
+  if(a==='admin_login'){
+    var u=find(email);
+    if(!u) return {ok:false,error:'Невірний email або пароль'};
+    if(u.status==='banned') return {ok:false,error:'Доступ заборонено'};
+    if(u.status==='pending') return {ok:false,error:'Акаунт очікує підтвердження першим адміністратором'};
+    if(u.password!==p.password) return {ok:false,error:'Невірний email або пароль'};
+    return {ok:true,token:email,me:{email:email,status:'active'}};
+  }
+  if(a==='admin_recover_request'){
+    var u2=find(email); if(u2&&u2.status!=='banned'){var code=(''+Math.floor(100000+Math.random()*900000));dSet('dom_rec',{email:email,code:code});return {ok:true,demoCode:code};}
+    return {ok:true};
+  }
+  if(a==='admin_recover_confirm'){
+    var rec=dGet('dom_rec',{}),u3=find(email);
+    if(!u3||rec.email!==email||String(rec.code)!==String(p.code)) return {ok:false,error:'Невірний код'};
+    if(String(p.password).length<6) return {ok:false,error:'Пароль мінімум 6 символів'};
+    u3.password=p.password;dSet('dom_admins',admins);localStorage.removeItem('dom_rec');
+    return {ok:true,token:(u3.status==='active'?email:''),status:u3.status};
+  }
+  // потрібен токен (активний)
+  var me=find(p.token);
+  if(!me||me.status!=='active') return {ok:false,error:'Потрібен вхід',needLogin:true};
+  if(a==='admin_data'){
+    var v=dGet('dom_demo',[]);
+    return {ok:true,question:'Чи потрібне нам резервне опалення?',results:dTally(),me:{email:me.email},
+      rows:v.map(function(x){return{time:x._t||'',apt:x.apt,place:x.place,fio:x.fio,phone:x.phone,choice:x.choice,ip:x.ip,ipCity:x.ipCity,ipRegion:x.ipRegion,ipCountry:x.ipCountry,lat:x.lat,lon:x.lon,acc:x.acc,device:x.device,ua:x.ua};})};
+  }
+  if(a==='admin_list') return {ok:true,admins:admins.map(function(x){return{email:x.email,status:x.status,created:x.created,me:dEmail(x.email)===dEmail(me.email)};})};
+  if(a==='admin_approve'||a==='admin_ban'||a==='admin_unban'){
+    var t=find(p.target); if(!t) return {ok:false,error:'Не знайдено'};
+    if(dEmail(t.email)===dEmail(me.email)) return {ok:false,error:'Не можна змінювати власний статус'};
+    t.status=(a==='admin_ban')?'banned':'active'; dSet('dom_admins',admins); return {ok:true};
+  }
+  return {ok:false,error:'Невідома дія'};
+}
+
+/* ---------- навігація екранами ---------- */
+var SCR=['scrSetup','scrLogin','scrRegister','scrRec1','scrRec2','panel'];
+function show(id){SCR.forEach(function(s){document.getElementById(s).classList.toggle('hide',s!==id);});}
+function setMsg(id,t,c){var m=document.getElementById(id);m.textContent=t;m.className='msg '+(c||'');}
+function token(){return localStorage.getItem(TOK_KEY)||'';}
+function setToken(t){if(t)localStorage.setItem(TOK_KEY,t);else localStorage.removeItem(TOK_KEY);}
+
+window.addEventListener('load',function(){
+  if(token()){ api('admin_data',{token:token()}).then(function(r){ if(r.ok){enterPanel(r);} else {setToken('');route();} }); }
+  else route();
+});
+function route(){
+  api('admin_status').then(function(r){ show(r.exists?'scrLogin':'scrSetup'); });
+}
+
+/* ---------- перше налаштування ---------- */
+document.getElementById('suGo').onclick=function(){
+  var k=document.getElementById('suKey').value, e=document.getElementById('suEmail').value,
+      p=document.getElementById('suPw').value, p2=document.getElementById('suPw2').value;
+  if(p!==p2){setMsg('suMsg','Паролі не співпадають','err');return;}
+  this.disabled=true;
+  api('admin_setup',{setupKey:k,email:e,password:p}).then(function(r){
+    document.getElementById('suGo').disabled=false;
+    if(r.ok){setToken(r.token);loadPanel();}else setMsg('suMsg',r.error,'err');
+  });
+};
+if(DEMO) document.getElementById('setupHint').innerHTML='🧪 Тестовий режим. Код налаштування: <b>demo</b>. Вигадайте email і пароль — це буде головний адміністратор.';
+
+/* ---------- вхід ---------- */
+document.getElementById('liGo').onclick=function(){
+  this.disabled=true;
+  api('admin_login',{email:document.getElementById('liEmail').value,password:document.getElementById('liPw').value}).then(function(r){
+    document.getElementById('liGo').disabled=false;
+    if(r.ok){setToken(r.token);loadPanel();}else setMsg('liMsg',r.error,'err');
+  });
+};
+document.getElementById('liPw').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('liGo').click();});
+document.getElementById('toRegister').onclick=function(){setMsg('rgMsg','','');show('scrRegister');};
+document.getElementById('toRecover').onclick=function(){setMsg('rc1Msg','','');show('scrRec1');};
+
+/* ---------- реєстрація ---------- */
+document.getElementById('rgGo').onclick=function(){
+  var p=document.getElementById('rgPw').value,p2=document.getElementById('rgPw2').value;
+  if(p!==p2){setMsg('rgMsg','Паролі не співпадають','err');return;}
+  this.disabled=true;
+  api('admin_register',{email:document.getElementById('rgEmail').value,password:p}).then(function(r){
+    document.getElementById('rgGo').disabled=false;
+    if(r.ok)setMsg('rgMsg','Готово! Акаунт очікує підтвердження головним адміністратором.','ok');
+    else setMsg('rgMsg',r.error,'err');
+  });
+};
+document.getElementById('rgBack').onclick=function(){show('scrLogin');};
+
+/* ---------- відновлення ---------- */
+document.getElementById('rc1Go').onclick=function(){
+  var e=document.getElementById('rc1Email').value;
+  this.disabled=true;
+  api('admin_recover_request',{email:e}).then(function(r){
+    document.getElementById('rc1Go').disabled=false;
+    document.getElementById('rc2Code').dataset.email=e;
+    if(r.demoCode){setMsg('rc1Msg','🧪 Тестовий код: '+r.demoCode+' (у реальному режимі прийде на email)','info');}
+    else setMsg('rc1Msg','Якщо email існує — код надіслано на пошту.','ok');
+    setTimeout(function(){show('scrRec2');},900);
+  });
+};
+document.getElementById('rc2Go').onclick=function(){
+  this.disabled=true;
+  api('admin_recover_confirm',{email:document.getElementById('rc2Code').dataset.email,code:document.getElementById('rc2Code').value,password:document.getElementById('rc2Pw').value}).then(function(r){
+    document.getElementById('rc2Go').disabled=false;
+    if(r.ok){
+      if(r.token){setToken(r.token);loadPanel();}
+      else setMsg('rc2Msg','Пароль змінено. Акаунт ще очікує підтвердження — увійдіть пізніше.','ok');
+    } else setMsg('rc2Msg',r.error,'err');
+  });
+};
+document.getElementById('rc1Back').onclick=function(){show('scrLogin');};
+document.getElementById('rc2Back').onclick=function(){show('scrLogin');};
+
+/* ---------- панель ---------- */
+document.getElementById('logout').onclick=function(){setToken('');DATA=null;route();};
+document.getElementById('refresh').onclick=function(){loadPanel();};
+
+function loadPanel(){ api('admin_data',{token:token()}).then(function(r){ if(r.ok)enterPanel(r); else {setToken('');route();} }); }
+function enterPanel(r){
+  DATA=r; show('panel');
+  document.getElementById('qtitle').textContent=r.question||'Результати';
+  document.getElementById('meBox').textContent=(r.me&&r.me.email)?('Ви: '+r.me.email):'';
+  renderVotes(r); loadAdmins();
+}
+function renderVotes(res){
+  var x=res.results;
+  document.getElementById('s-yes').textContent=x.yes;document.getElementById('s-no').textContent=x.no;
+  document.getElementById('s-ab').textContent=x.abstain;document.getElementById('s-tot').textContent=x.total;
+  var tb=document.querySelector('#tbl tbody');tb.innerHTML='';
+  res.rows.forEach(function(v,i){
+    var gps=(v.lat&&v.lon)?'<a class="geo" target="_blank" href="https://maps.google.com/?q='+v.lat+','+v.lon+'">'+(+v.lat).toFixed(4)+', '+(+v.lon).toFixed(4)+'</a>':'—';
+    var cls=v.choice==='yes'?'t-yes':v.choice==='no'?'t-no':'t-ab';
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td>'+(i+1)+'</td><td>'+fmt(v.time)+'</td><td>'+esc(v.apt)+'</td><td>'+esc(v.place)+'</td><td>'+esc(v.fio)+'</td><td>'+esc(v.phone)+'</td>'+
+      '<td><span class="tag '+cls+'">'+(L[v.choice]||v.choice)+'</span></td><td>'+esc(v.ip)+'</td><td>'+esc(v.ipCity)+'</td><td>'+esc(v.ipCountry)+'</td><td>'+gps+'</td><td>'+esc(v.acc)+'</td><td>'+esc(v.device)+'</td>';
+    tb.appendChild(tr);
+  });
+}
+function loadAdmins(){
+  api('admin_list',{token:token()}).then(function(r){
+    if(!r.ok)return; var tb=document.querySelector('#adm tbody');tb.innerHTML='';
+    r.admins.forEach(function(a){
+      var st='<span class="st st-'+a.status+'">'+({active:'Активний',pending:'Очікує',banned:'Заблокований'}[a.status]||a.status)+'</span>';
+      var act='';
+      if(a.me){act='<span class="mut">(ви)</span>';}
+      else{
+        if(a.status==='pending')act+='<button class="tiny ok2" data-act="admin_approve" data-e="'+esc(a.email)+'">Підтвердити</button> ';
+        if(a.status!=='banned')act+='<button class="tiny ban" data-act="admin_ban" data-e="'+esc(a.email)+'">Бан</button>';
+        if(a.status==='banned')act+='<button class="tiny ok2" data-act="admin_unban" data-e="'+esc(a.email)+'">Розбанити</button>';
+      }
+      var tr=document.createElement('tr');
+      tr.innerHTML='<td>'+esc(a.email)+'</td><td>'+st+'</td><td>'+fmt(a.created)+'</td><td>'+act+'</td>';
+      tb.appendChild(tr);
+    });
+    tb.querySelectorAll('button[data-act]').forEach(function(b){
+      b.onclick=function(){ b.disabled=true; api(b.dataset.act,{token:token(),target:b.dataset.e}).then(function(rr){ if(!rr.ok)alert(rr.error||'Помилка'); loadAdmins(); }); };
+    });
+  });
+}
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function fmt(t){if(!t)return'';var d=new Date(t);if(isNaN(d))return String(t);var p=function(n){return(n<10?'0':'')+n;};
+  return p(d.getDate())+'.'+p(d.getMonth()+1)+'.'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes());}
+
+/* ---------- PDF (рендер з HTML → кирилиця коректна, білий фон для друку) ---------- */
+function pct(n,t){return t?Math.round(n/t*100):0;}
+function today(){var d=new Date(),p=function(n){return(n<10?'0':'')+n;};return p(d.getDate())+'.'+p(d.getMonth()+1)+'.'+d.getFullYear();}
+
+function elementToPdf(el,filename,orient){
+  el.style.position='fixed';el.style.left='-10000px';el.style.top='0';document.body.appendChild(el);
+  return html2canvas(el,{scale:2,backgroundColor:'#ffffff'}).then(function(canvas){
+    var pdf=new jspdf.jsPDF(orient||'p','mm','a4');
+    var pw=pdf.internal.pageSize.getWidth(), ph=pdf.internal.pageSize.getHeight();
+    var pagePx=Math.floor(canvas.width*ph/pw), pos=0, first=true;
+    while(pos<canvas.height){
+      var h=Math.min(pagePx,canvas.height-pos);
+      var slice=document.createElement('canvas');slice.width=canvas.width;slice.height=h;
+      var ctx=slice.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,slice.width,h);
+      ctx.drawImage(canvas,0,pos,canvas.width,h,0,0,canvas.width,h);
+      if(!first)pdf.addPage();
+      pdf.addImage(slice,'PNG',0,0,pw,h*pw/canvas.width);
+      first=false;pos+=pagePx;
+    }
+    document.body.removeChild(el);pdf.save(filename);
+  });
+}
+
+function col(count,label,clr,p){
+  return '<div style="flex:1;border:1px solid #e2e8f0;border-top:6px solid '+clr+';border-radius:14px;padding:26px 14px;text-align:center;">'+
+    '<div style="font-family:Unbounded,Arial;font-weight:800;font-size:56px;line-height:1;color:'+clr+';">'+count+'</div>'+
+    '<div style="font-weight:700;font-size:17px;margin-top:12px;color:#0f172a;">'+label+'</div>'+
+    '<div style="font-size:15px;color:#64748b;margin-top:4px;">'+p+'%</div></div>';
+}
+function pdfShort(){
+  var r=DATA.results, el=document.createElement('div');
+  el.style.cssText='width:794px;background:#fff;color:#0f172a;font-family:Manrope,Arial,sans-serif;padding:56px 56px;box-sizing:border-box;';
+  el.innerHTML=
+    '<div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #0f172a;padding-bottom:16px;">'+
+      '<div style="font-family:Unbounded,Arial;font-weight:700;font-size:27px;">ЖБК «Метробудівник-3»</div>'+
+      '<div style="font-size:14px;color:#64748b;">'+today()+'</div></div>'+
+    '<div style="font-size:24px;font-weight:700;margin:30px 0 4px;">Чи потрібне нам резервне опалення?</div>'+
+    '<div style="font-size:15px;color:#64748b;margin-bottom:30px;">Результати голосування</div>'+
+    '<div style="display:flex;gap:22px;">'+
+      col(r.yes,'Так',  '#16a34a',pct(r.yes,r.total))+
+      col(r.no, 'Ні',   '#dc2626',pct(r.no,r.total))+
+      col(r.abstain,'Утримався','#d97706',pct(r.abstain,r.total))+
+    '</div>'+
+    '<div style="margin-top:40px;font-family:Unbounded,Arial;font-weight:700;font-size:26px;text-align:center;">Усього голосів: '+r.total+'</div>'+
+    '<div style="margin-top:48px;font-size:12px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:12px;text-align:center;">Голосування мешканців ЖБК «Метробудівник-3»</div>';
+  elementToPdf(el,'golosuvannya-korotko.pdf','p');
+}
+
+function pdfFull(){
+  var r=DATA.results, el=document.createElement('div');
+  var rows=DATA.rows.map(function(x,i){
+    var clr=x.choice==='yes'?'#16a34a':x.choice==='no'?'#dc2626':'#d97706';
+    var gps=(x.lat&&x.lon)?((+x.lat).toFixed(4)+', '+(+x.lon).toFixed(4)):'—';
+    return '<tr>'+
+      '<td style="padding:7px 6px;border-bottom:1px solid #eef2f7;">'+(i+1)+'</td>'+
+      '<td style="padding:7px 6px;border-bottom:1px solid #eef2f7;">'+fmt(x.time)+'</td>'+
+      '<td style="padding:7px 6px;border-bottom:1px solid #eef2f7;font-weight:700;">'+esc(x.apt)+'</td>'+
+      '<td style="padding:7px 6px;border-bottom:1px solid #eef2f7;">'+esc(x.fio)+'</td>'+
+      '<td style="padding:7px 6px;border-bottom:1px solid #eef2f7;">'+esc(x.phone)+'</td>'+
+      '<td style="padding:7px 6px;border-bottom:1px solid #eef2f7;font-weight:700;color:'+clr+';">'+(L[x.choice]||x.choice)+'</td>'+
+      '<td style="padding:7px 6px;border-bottom:1px solid #eef2f7;">'+esc(x.ip)+'</td>'+
+      '<td style="padding:7px 6px;border-bottom:1px solid #eef2f7;">'+esc(x.ipCity)+'</td>'+
+      '<td style="padding:7px 6px;border-bottom:1px solid #eef2f7;">'+esc(x.ipCountry)+'</td>'+
+      '<td style="padding:7px 6px;border-bottom:1px solid #eef2f7;">'+gps+'</td>'+
+      '<td style="padding:7px 6px;border-bottom:1px solid #eef2f7;">'+esc(x.device)+'</td></tr>';
+  }).join('');
+  el.style.cssText='width:1123px;background:#fff;color:#0f172a;font-family:Manrope,Arial,sans-serif;padding:46px 46px;box-sizing:border-box;';
+  el.innerHTML=
+    '<div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #0f172a;padding-bottom:14px;">'+
+      '<div style="font-family:Unbounded,Arial;font-weight:700;font-size:23px;">ЖБК «Метробудівник-3» — детальний звіт</div>'+
+      '<div style="font-size:13px;color:#64748b;">'+today()+'</div></div>'+
+    '<div style="font-size:18px;font-weight:700;margin:20px 0 6px;">Чи потрібне нам резервне опалення?</div>'+
+    '<div style="font-size:14px;margin-bottom:20px;">'+
+      '<b style="color:#16a34a;">Так: '+r.yes+' ('+pct(r.yes,r.total)+'%)</b>　　'+
+      '<b style="color:#dc2626;">Ні: '+r.no+' ('+pct(r.no,r.total)+'%)</b>　　'+
+      '<b style="color:#d97706;">Утримався: '+r.abstain+' ('+pct(r.abstain,r.total)+'%)</b>　　'+
+      '<b>Усього: '+r.total+'</b></div>'+
+    '<table style="width:100%;border-collapse:collapse;font-size:12px;">'+
+      '<thead><tr style="background:#f1f5f9;">'+
+        ['#','Час','Кв.№','ПІБ власника','Телефон','Відповідь','IP','Місто','Країна','GPS','Пристрій']
+          .map(function(h){return '<th style="padding:9px 6px;text-align:left;border-bottom:2px solid #cbd5e1;">'+h+'</th>';}).join('')+
+      '</tr></thead><tbody>'+rows+'</tbody></table>';
+  elementToPdf(el,'golosuvannya-detalno.pdf','l');
+}
+document.getElementById('pdfShort').onclick=pdfShort;
+document.getElementById('pdfFull').onclick=pdfFull;
+</script>
+</body>
+</html>
