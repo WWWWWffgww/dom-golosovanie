@@ -173,6 +173,12 @@
 
   <!-- ПАНЕЛЬ -->
   <div id="panel" class="hide">
+    <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:14px">
+      <span class="mut" id="meBox"></span>
+      <button class="alt" id="logout">Вийти</button>
+    </div>
+
+    <div id="listView">
     <!-- ГОЛОСУВАННЯ -->
     <div class="card">
       <div class="row" style="justify-content:space-between;align-items:center">
@@ -246,35 +252,10 @@
     </div>
 
     <div class="card">
-      <div class="row panel-head" style="justify-content:space-between">
-        <h1 style="margin:0;font-size:17px" id="qtitle">Результати</h1>
-        <div class="row">
-          <span class="mut" id="meBox"></span>
-          <button class="alt" id="refresh">Оновити</button>
-          <button id="pdfShort">PDF · коротко</button>
-          <button id="pdfFull">PDF · детально</button>
-          <button class="tg" id="tgPublish">📢 Telegram</button>
-          <button class="alt" id="logout">Вийти</button>
-        </div>
-      </div>
-      <div class="stat" id="stat"></div>
-    </div>
-
-    <div class="card">
       <h2>Адміністратори</h2>
       <div class="mut" style="margin-bottom:8px">Нові реєстрації неактивні, поки ви їх не підтвердите. Зайвих — банте.</div>
       <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
         <table id="adm" class="resp" style="min-width:520px"><thead><tr><th>Email</th><th>Статус</th><th>Створено</th><th>Дії</th></tr></thead><tbody></tbody></table>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Усі голоси (повні дані)</h2>
-      <div class="scroll">
-        <div class="mut" style="margin-bottom:8px" id="votesNote">Натисніть на рядок, щоб побачити повну інформацію (IP, місто, GPS, пристрій).</div>
-        <table id="tbl" class="resp"><thead><tr id="tblHead">
-          <th>#</th><th>Час</th><th>Кв.№</th><th>ПІБ</th><th>Телефон</th><th>Відповідь</th>
-        </tr></thead><tbody></tbody></table>
       </div>
     </div>
 
@@ -297,6 +278,33 @@
         <div id="aptParade" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
         <div style="overflow-x:auto">
           <table id="aptTbl" class="resp" style="min-width:560px"><thead><tr><th>Кв. №</th><th>Парадне</th><th>Поверх</th><th>Код</th><th>Оновлено</th><th>Дії</th></tr></thead><tbody></tbody></table>
+        </div>
+      </div>
+    </div>
+    </div><!-- /listView -->
+
+    <!-- ВИД ОКРЕМОГО ГОЛОСУВАННЯ -->
+    <div id="pollView" style="display:none">
+      <div style="margin-bottom:14px"><a id="backToList" style="color:#ffb27a;cursor:pointer;font-weight:600;font-size:15px">← Назад до списку голосувань</a></div>
+      <div class="card">
+        <div class="row panel-head" style="justify-content:space-between">
+          <h1 style="margin:0;font-size:17px" id="qtitle">Результати</h1>
+          <div class="row">
+            <button class="alt" id="refresh">Оновити</button>
+            <button id="pdfShort">PDF · коротко</button>
+            <button id="pdfFull">PDF · детально</button>
+            <button class="tg" id="tgPublish">📢 Telegram</button>
+          </div>
+        </div>
+        <div class="stat" id="stat"></div>
+      </div>
+      <div class="card">
+        <h2>Усі голоси (повні дані)</h2>
+        <div class="scroll">
+          <div class="mut" style="margin-bottom:8px" id="votesNote">Натисніть на рядок, щоб побачити повну інформацію (IP, місто, GPS, пристрій).</div>
+          <table id="tbl" class="resp"><thead><tr id="tblHead">
+            <th>#</th><th>Час</th><th>Кв.№</th><th>ПІБ</th><th>Телефон</th><th>Відповідь</th>
+          </tr></thead><tbody></tbody></table>
         </div>
       </div>
     </div>
@@ -466,13 +474,13 @@ document.getElementById('rc2Back').onclick=function(){show('scrLogin');};
 document.getElementById('logout').onclick=function(){setToken('');DATA=null;route();};
 document.getElementById('refresh').onclick=function(){ if(DATA&&DATA.poll) selectPoll(DATA.poll.id); else loadPanel(); };
 
+function showListView(){ document.getElementById('listView').style.display='block'; document.getElementById('pollView').style.display='none'; window.scrollTo(0,0); }
+function showPollView(){ document.getElementById('listView').style.display='none'; document.getElementById('pollView').style.display='block'; window.scrollTo(0,0); }
+document.getElementById('backToList').onclick=function(){ showListView(); loadPolls(); };
 function loadPanel(){
   api('admin_polls',{token:token()}).then(function(r){
     if(!r.ok){ setToken(''); route(); return; }
-    show('panel'); renderPolls(r.polls); loadAdmins(); loadApartments(); loadTgSettings();
-    var act=r.polls.filter(function(p){return p.status==='active';})[0] || r.polls[0];
-    if(act){ selectPoll(act.id); }
-    else { DATA=null; document.getElementById('qtitle').textContent='Немає голосувань — створіть нове'; clearStats(); }
+    show('panel'); showListView(); renderPolls(r.polls); loadAdmins(); loadApartments(); loadTgSettings();
   });
 }
 function loadPolls(){ api('admin_polls',{token:token()}).then(function(r){ if(r.ok) renderPolls(r.polls); }); }
@@ -503,14 +511,14 @@ function selectPoll(id){
     if(!r.ok){ alert(r.error||'Помилка'); return; }
     DATA={poll:r.poll, results:r.results, rows:r.rows, question:r.poll.question, me:r.me};
     document.getElementById('qtitle').textContent='Результати: '+r.poll.question;
-    document.getElementById('meBox').textContent=(r.me&&r.me.email)?('Ви: '+r.me.email):'';
-    renderVotes(r);
+    if(r.me&&r.me.email) document.getElementById('meBox').textContent='Ви: '+r.me.email;
+    renderVotes(r); showPollView();
   });
 }
 function setPollStatus(id,status){
   api('admin_set_status',{token:token(),poll_id:id,status:status}).then(function(r){
     if(!r.ok){alert(r.error||'Помилка');return;}
-    loadPolls(); if(DATA&&DATA.poll&&DATA.poll.id===id) selectPoll(id);
+    loadPolls();
   });
 }
 
@@ -629,7 +637,9 @@ function renderVotes(res){
 function detItem(k,val){ return '<div class="detrow"><span>'+k+'</span><b>'+(val||'—')+'</b></div>'; }
 function loadAdmins(){
   api('admin_list',{token:token()}).then(function(r){
-    if(!r.ok)return; var tb=document.querySelector('#adm tbody');tb.innerHTML='';
+    if(!r.ok)return;
+    var meAd=r.admins.filter(function(a){return a.me;})[0]; if(meAd) document.getElementById('meBox').textContent='Ви: '+meAd.email;
+    var tb=document.querySelector('#adm tbody');tb.innerHTML='';
     r.admins.forEach(function(a){
       var st='<span class="st st-'+a.status+'">'+({active:'Активний',pending:'Очікує',banned:'Заблокований'}[a.status]||a.status)+'</span>';
       var act='';
