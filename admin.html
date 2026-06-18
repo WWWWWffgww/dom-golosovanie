@@ -217,6 +217,28 @@
         </tr></thead><tbody></tbody></table>
       </div>
     </div>
+
+    <!-- КВАРТИРИ ТА КОДИ -->
+    <div class="card">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <h2 style="margin:0">Квартири та коди</h2>
+        <div class="row">
+          <button class="alt" id="aptCsv">⬇️ Коди (CSV)</button>
+          <button class="ban" id="aptRegenAll">Оновити всі коди</button>
+        </div>
+      </div>
+      <div class="mut" style="margin-top:6px">Код-пароль квартири (6 цифр) для анонімного голосування. Можна оновити, якщо втрачено.</div>
+      <div id="aptSeedBox" style="display:none;margin-top:12px">
+        <button id="aptSeed">Створити реєстр квартир</button>
+      </div>
+      <div id="aptBody" style="display:none">
+        <label style="margin-top:10px">Парадне</label>
+        <div id="aptParade" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
+        <div style="overflow-x:auto">
+          <table id="aptTbl" class="resp" style="min-width:480px"><thead><tr><th>Поверх</th><th>Кв.</th><th>Код</th><th>Дії</th></tr></thead><tbody></tbody></table>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -386,7 +408,7 @@ document.getElementById('refresh').onclick=function(){ if(DATA&&DATA.poll) selec
 function loadPanel(){
   api('admin_polls',{token:token()}).then(function(r){
     if(!r.ok){ setToken(''); route(); return; }
-    show('panel'); renderPolls(r.polls); loadAdmins();
+    show('panel'); renderPolls(r.polls); loadAdmins(); loadApartments();
     var act=r.polls.filter(function(p){return p.status==='active';})[0] || r.polls[0];
     if(act){ selectPoll(act.id); }
     else { DATA=null; document.getElementById('qtitle').textContent='Немає голосувань — створіть нове'; clearStats(); }
@@ -480,6 +502,62 @@ function loadAdmins(){
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function fmt(t){if(!t)return'';var d=new Date(t);if(isNaN(d))return String(t);var p=function(n){return(n<10?'0':'')+n;};
   return p(d.getDate())+'.'+p(d.getMonth()+1)+'.'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes());}
+
+/* ---------- Квартири та коди ---------- */
+var SEL_PARADE=1;
+function loadApartments(){
+  api('admin_apartments',{token:token(),parade:1}).then(function(r){
+    if(!r.ok) return;
+    if(!r.apartments.length){
+      document.getElementById('aptSeedBox').style.display='block';
+      document.getElementById('aptBody').style.display='none';
+    } else {
+      document.getElementById('aptSeedBox').style.display='none';
+      document.getElementById('aptBody').style.display='block';
+      buildParadeBtns(); renderApartments(r.apartments);
+    }
+  });
+}
+function buildParadeBtns(){
+  var w=document.getElementById('aptParade'); if(w.childElementCount) return;
+  for(var i=1;i<=6;i++){(function(n){
+    var b=document.createElement('button'); b.textContent='Парадне '+n; b.className=(n===SEL_PARADE?'':'alt'); b.className+=' tiny'; b.dataset.p=n;
+    b.onclick=function(){ SEL_PARADE=n; w.querySelectorAll('button').forEach(function(x){x.className='tiny alt';}); b.className='tiny'; selectParade(n); };
+    w.appendChild(b);
+  })(i);}
+}
+function selectParade(n){ api('admin_apartments',{token:token(),parade:n}).then(function(r){ if(r.ok) renderApartments(r.apartments); }); }
+function renderApartments(list){
+  var tb=document.querySelector('#aptTbl tbody'); tb.innerHTML='';
+  list.forEach(function(x){
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td data-label="Поверх">'+x.floor+'</td><td data-label="Кв.">'+x.num+'</td>'+
+      '<td data-label="Код"><b style="font-size:16px;letter-spacing:1px">'+esc(x.code)+'</b></td>'+
+      '<td data-label="Дії"><button class="tiny alt" data-rg="'+x.id+'">Оновити код</button></td>';
+    tb.appendChild(tr);
+  });
+  tb.querySelectorAll('button[data-rg]').forEach(function(b){
+    b.onclick=function(){ b.disabled=true; api('admin_regen_code',{token:token(),id:+b.dataset.rg}).then(function(r){ b.disabled=false; if(r.ok) selectParade(SEL_PARADE); else alert(r.error||'Помилка'); }); };
+  });
+}
+document.getElementById('aptSeed').onclick=function(){
+  var b=this; b.disabled=true;
+  api('admin_seed_apartments',{token:token()}).then(function(r){ b.disabled=false; if(r.ok) loadApartments(); else alert(r.error||'Помилка'); });
+};
+document.getElementById('aptRegenAll').onclick=function(){
+  if(!confirm('Оновити КОДИ ВСІХ квартир? Старі коди перестануть діяти. Дію не можна скасувати.')) return;
+  var b=this; b.disabled=true;
+  api('admin_regen_all',{token:token()}).then(function(r){ b.disabled=false; if(r.ok){alert('Оновлено кодів: '+r.count);selectParade(SEL_PARADE);} else alert(r.error||'Помилка'); });
+};
+document.getElementById('aptCsv').onclick=function(){
+  api('admin_apartments',{token:token()}).then(function(r){
+    if(!r.ok)return;
+    var lines=['Парадне;Поверх;Квартира;Код'];
+    r.apartments.forEach(function(x){ lines.push(x.parade+';'+x.floor+';'+x.num+';'+x.code); });
+    var blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+    var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='kvartyry-kody.csv'; a.click();
+  });
+};
 
 /* ---------- PDF (рендер з HTML → кирилиця коректна, білий фон для друку) ---------- */
 function pct(n,t){return t?Math.round(n/t*100):0;}
