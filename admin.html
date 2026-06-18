@@ -284,10 +284,11 @@
         <button id="aptSeed">Створити реєстр квартир</button>
       </div>
       <div id="aptBody" style="display:none">
-        <label style="margin-top:10px">Парадне</label>
+        <input id="aptSearch" inputmode="numeric" placeholder="🔎 Пошук за номером квартири (напр. 12)" style="margin-top:8px">
+        <label style="margin-top:12px">Парадне</label>
         <div id="aptParade" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
         <div style="overflow-x:auto">
-          <table id="aptTbl" class="resp" style="min-width:480px"><thead><tr><th>Кв. №</th><th>Поверх</th><th>Код</th><th>Дії</th></tr></thead><tbody></tbody></table>
+          <table id="aptTbl" class="resp" style="min-width:560px"><thead><tr><th>Кв. №</th><th>Парадне</th><th>Поверх</th><th>Код</th><th>Оновлено</th><th>Дії</th></tr></thead><tbody></tbody></table>
         </div>
       </div>
     </div>
@@ -607,9 +608,9 @@ function fmt(t){if(!t)return'';var d=new Date(t);if(isNaN(d))return String(t);va
   return p(d.getDate())+'.'+p(d.getMonth()+1)+'.'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes());}
 
 /* ---------- Квартири та коди ---------- */
-var SEL_PARADE=1;
+var SEL_PARADE=1, ALL_APTS=[];
 function loadApartments(){
-  api('admin_apartments',{token:token(),parade:1}).then(function(r){
+  api('admin_apartments',{token:token()}).then(function(r){
     if(!r.ok) return;
     if(!r.apartments.length){
       document.getElementById('aptSeedBox').style.display='block';
@@ -617,7 +618,7 @@ function loadApartments(){
     } else {
       document.getElementById('aptSeedBox').style.display='none';
       document.getElementById('aptBody').style.display='block';
-      buildParadeBtns(); renderApartments(r.apartments);
+      ALL_APTS=r.apartments; buildParadeBtns(); renderFiltered();
     }
   });
 }
@@ -625,22 +626,48 @@ function buildParadeBtns(){
   var w=document.getElementById('aptParade'); if(w.childElementCount) return;
   for(var i=1;i<=6;i++){(function(n){
     var b=document.createElement('button'); b.textContent='Парадне '+n; b.className=(n===SEL_PARADE?'':'alt'); b.className+=' tiny'; b.dataset.p=n;
-    b.onclick=function(){ SEL_PARADE=n; w.querySelectorAll('button').forEach(function(x){x.className='tiny alt';}); b.className='tiny'; selectParade(n); };
+    b.onclick=function(){ SEL_PARADE=n; document.getElementById('aptSearch').value=''; w.querySelectorAll('button').forEach(function(x){x.className='tiny alt';}); b.className='tiny'; renderFiltered(); };
     w.appendChild(b);
   })(i);}
 }
-function selectParade(n){ api('admin_apartments',{token:token(),parade:n}).then(function(r){ if(r.ok) renderApartments(r.apartments); }); }
+function renderFiltered(){
+  var q=document.getElementById('aptSearch').value.trim();
+  var list = q ? ALL_APTS.filter(function(x){return String(x.apt_no).indexOf(q)>=0;})
+               : ALL_APTS.filter(function(x){return x.parade===SEL_PARADE;});
+  renderApartments(list);
+}
+document.getElementById('aptSearch').addEventListener('input',renderFiltered);
+function shareCode(apt,code){
+  var text='Код для голосування ЖБК «Метробудівник-3»\nКвартира № '+apt+'\nКод: '+code;
+  if(navigator.share){ navigator.share({title:'Код голосування',text:text}).catch(function(){}); }
+  else { navigator.clipboard&&navigator.clipboard.writeText(text); alert('Скопійовано (поділитися недоступне у цьому браузері):\n\n'+text); }
+}
+function copyCode(code,btn){
+  if(navigator.clipboard){ navigator.clipboard.writeText(code).then(function(){ var t=btn.textContent; btn.textContent='✓'; setTimeout(function(){btn.textContent=t;},1200); }); }
+  else { alert('Код: '+code); }
+}
 function renderApartments(list){
   var tb=document.querySelector('#aptTbl tbody'); tb.innerHTML='';
+  if(!list.length){ tb.innerHTML='<tr><td colspan="6" style="color:var(--mut)">Нічого не знайдено</td></tr>'; return; }
   list.forEach(function(x){
     var tr=document.createElement('tr');
-    tr.innerHTML='<td data-label="Кв. №"><b>'+x.apt_no+'</b></td><td data-label="Поверх">'+x.floor+'</td>'+
-      '<td data-label="Код"><b style="font-size:16px;letter-spacing:1px">'+esc(x.code)+'</b></td>'+
-      '<td data-label="Дії"><button class="tiny alt" data-rg="'+x.id+'">Оновити код</button></td>';
+    tr.innerHTML='<td data-label="Кв. №"><b>'+x.apt_no+'</b></td>'+
+      '<td data-label="Парадне">'+x.parade+'</td>'+
+      '<td data-label="Поверх">'+x.floor+'</td>'+
+      '<td data-label="Код"><b class="codeval" style="font-size:17px;letter-spacing:1px">'+esc(x.code)+'</b> '+
+        '<button class="tiny alt" data-cp="'+esc(x.code)+'" title="Копіювати">📋</button> '+
+        '<button class="tiny alt" data-sh="'+x.apt_no+'~'+esc(x.code)+'" title="Поділитися">📤</button></td>'+
+      '<td data-label="Оновлено" style="color:var(--mut)">'+(x.code_updated?fmt(x.code_updated):'—')+'</td>'+
+      '<td data-label="Дії"><button class="tiny ban" data-rg="'+x.id+'">Оновити</button></td>';
     tb.appendChild(tr);
   });
+  tb.querySelectorAll('button[data-cp]').forEach(function(b){ b.onclick=function(){ copyCode(b.dataset.cp,b); }; });
+  tb.querySelectorAll('button[data-sh]').forEach(function(b){ b.onclick=function(){ var p=b.dataset.sh.split('~'); shareCode(p[0],p[1]); }; });
   tb.querySelectorAll('button[data-rg]').forEach(function(b){
-    b.onclick=function(){ b.disabled=true; api('admin_regen_code',{token:token(),id:+b.dataset.rg}).then(function(r){ b.disabled=false; if(r.ok) selectParade(SEL_PARADE); else alert(r.error||'Помилка'); }); };
+    b.onclick=function(){ if(!confirm('Оновити код цієї квартири? Старий код перестане діяти.'))return; b.disabled=true;
+      api('admin_regen_code',{token:token(),id:+b.dataset.rg}).then(function(r){ b.disabled=false;
+        if(r.ok){ var ap=ALL_APTS.filter(function(a){return a.id===+b.dataset.rg;})[0]; if(ap){ap.code=r.code;ap.code_updated=r.code_updated;} renderFiltered(); }
+        else alert(r.error||'Помилка'); }); };
   });
 }
 document.getElementById('aptSeed').onclick=function(){
@@ -650,7 +677,7 @@ document.getElementById('aptSeed').onclick=function(){
 document.getElementById('aptRegenAll').onclick=function(){
   if(!confirm('Оновити КОДИ ВСІХ квартир? Старі коди перестануть діяти. Дію не можна скасувати.')) return;
   var b=this; b.disabled=true;
-  api('admin_regen_all',{token:token()}).then(function(r){ b.disabled=false; if(r.ok){alert('Оновлено кодів: '+r.count);selectParade(SEL_PARADE);} else alert(r.error||'Помилка'); });
+  api('admin_regen_all',{token:token()}).then(function(r){ b.disabled=false; if(r.ok){alert('Оновлено кодів: '+r.count);loadApartments();} else alert(r.error||'Помилка'); });
 };
 document.getElementById('aptCsv').onclick=function(){
   api('admin_apartments',{token:token()}).then(function(r){
