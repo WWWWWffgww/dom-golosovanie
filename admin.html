@@ -60,6 +60,9 @@
   .scroll{overflow:auto;max-height:60vh;-webkit-overflow-scrolling:touch}
   .scroll table{min-width:520px}
   .aptacts,.tacts{display:inline-flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+  .nowrapacts{flex-wrap:nowrap}
+  .codecell{display:inline-flex;gap:8px;align-items:center;flex-wrap:nowrap;justify-content:flex-end}
+  #pollsTbl td:last-child{white-space:nowrap}
   .iconbtn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:36px;padding:0;border-radius:10px;
     background:#2c3346;border:1.5px solid rgba(255,255,255,.16);color:#dfe4ee;cursor:pointer;transition:.15s}
   .iconbtn:active{background:#3a4358}
@@ -104,6 +107,10 @@
     table.resp td{border:0;padding:6px 0;display:flex;justify-content:space-between;gap:14px;text-align:right;font-size:13.5px}
     table.resp td::before{content:attr(data-label);color:var(--mut);font-weight:600;text-align:left;flex:0 0 40%;white-space:nowrap}
     table.resp td:empty{display:none}
+    /* ячейки с кнопками/кодом — на всю ширину, контент в одну строку */
+    table.resp td.wfull{flex-direction:column;align-items:stretch;white-space:normal}
+    table.resp td.wfull::before{flex:none;text-align:left;margin-bottom:8px}
+    table.resp td.wfull .tacts,table.resp td.wfull .codecell{width:100%;justify-content:flex-start}
     table.resp .vdetail td{display:block !important}
     table.resp .vdetail td::before{content:none !important}
   }
@@ -515,7 +522,7 @@ function renderPolls(polls){
     if(p.status==='active') act+='<button class="tiny ban" data-close="'+p.id+'">Закрити</button>';
     else if(!p.published) act+='<button class="tiny ok2" data-act="'+p.id+'">Активувати</button>';
     var tr=document.createElement('tr');
-    tr.innerHTML='<td data-label="Питання">'+esc(p.question)+'</td><td data-label="Статус">'+st+'</td><td data-label="Голосів">'+p.total+'</td><td data-label="Дії"><span class="tacts">'+act+'</span></td>';
+    tr.innerHTML='<td data-label="Питання">'+esc(p.question)+'</td><td data-label="Статус">'+st+'</td><td data-label="Голосів">'+p.total+'</td><td data-label="Дії" class="wfull"><span class="tacts nowrapacts">'+act+'</span></td>';
     tb.appendChild(tr);
   });
   tb.querySelectorAll('button[data-sel]').forEach(function(b){ b.onclick=function(){selectPoll(+b.dataset.sel);}; });
@@ -733,12 +740,12 @@ function renderApartments(list){
     tr.innerHTML='<td data-label="Кв. №"><span style="display:inline-block;background:rgba(255,138,61,.18);color:#ffb27a;font-weight:800;font-size:16px;padding:3px 11px;border-radius:8px">'+x.apt_no+'</span></td>'+
       '<td data-label="Парадне">'+x.parade+'</td>'+
       '<td data-label="Поверх">'+x.floor+'</td>'+
-      '<td data-label="Код"><b class="codeval" style="display:inline-block;background:rgba(34,224,123,.14);color:#9ff0c2;font-size:19px;font-weight:800;letter-spacing:2px;padding:5px 13px;border-radius:9px;border:1px solid rgba(34,224,123,.3)">'+esc(x.code)+'</b></td>'+
-      '<td data-label="Оновлено" style="color:var(--mut)">'+(x.code_updated?fmt(x.code_updated):'—')+'</td>'+
-      '<td data-label="Дії"><span class="tacts">'+
+      '<td data-label="Код" class="wfull"><span class="codecell">'+
+        '<b class="codeval" style="display:inline-block;background:rgba(34,224,123,.14);color:#9ff0c2;font-size:18px;font-weight:800;letter-spacing:2px;padding:5px 12px;border-radius:9px;border:1px solid rgba(34,224,123,.3)">'+esc(x.code)+'</b>'+
         '<button class="iconbtn" data-cp="'+esc(x.code)+'" title="Копіювати код">'+IC_COPY+'</button>'+
-        '<button class="iconbtn" data-sh="'+x.apt_no+'~'+esc(x.code)+'" title="Поділитися">'+IC_SHARE+'</button>'+
-        '<button class="tiny ban" data-rg="'+x.id+'">Оновити</button></span></td>';
+        '<button class="iconbtn" data-sh="'+x.apt_no+'~'+esc(x.code)+'" title="Поділитися">'+IC_SHARE+'</button></span></td>'+
+      '<td data-label="Оновлено" style="color:var(--mut)">'+(x.code_updated?fmt(x.code_updated):'—')+'</td>'+
+      '<td data-label="Дії"><button class="tiny ban" data-rg="'+x.id+'">Оновити</button></td>';
     tb.appendChild(tr);
   });
   tb.querySelectorAll('button[data-cp]').forEach(function(b){ b.onclick=function(){ copyCode(b.dataset.cp,b); }; });
