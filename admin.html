@@ -161,9 +161,28 @@
 
   <!-- ПАНЕЛЬ -->
   <div id="panel" class="hide">
+    <!-- ГОЛОСУВАННЯ -->
+    <div class="card">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <h2 style="margin:0">Голосування</h2>
+        <button id="newPollBtn">➕ Нове голосування</button>
+      </div>
+      <div id="newPollForm" style="display:none;margin-top:12px">
+        <input id="newPollQ" placeholder="Текст питання (напр.: Чи ставимо новий домофон?)">
+        <div class="row" style="margin-top:8px">
+          <button id="createPollBtn">Створити (зробити активним)</button>
+          <button class="alt" id="cancelPollBtn">Скасувати</button>
+        </div>
+        <div class="msg" id="pollMsg"></div>
+      </div>
+      <div style="overflow-x:auto;margin-top:12px">
+        <table id="pollsTbl" class="resp" style="min-width:520px"><thead><tr><th>Питання</th><th>Статус</th><th>Голосів</th><th>Дії</th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+
     <div class="card">
       <div class="row panel-head" style="justify-content:space-between">
-        <h1 style="margin:0" id="qtitle">Результати</h1>
+        <h1 style="margin:0;font-size:17px" id="qtitle">Результати</h1>
         <div class="row">
           <span class="mut" id="meBox"></span>
           <button class="alt" id="refresh">Оновити</button>
@@ -290,7 +309,7 @@ function token(){return localStorage.getItem(TOK_KEY)||'';}
 function setToken(t){if(t)localStorage.setItem(TOK_KEY,t);else localStorage.removeItem(TOK_KEY);}
 
 window.addEventListener('load',function(){
-  if(token()){ api('admin_data',{token:token()}).then(function(r){ if(r.ok){enterPanel(r);} else {setToken('');route();} }); }
+  if(token()){ loadPanel(); }
   else route();
 });
 function route(){
@@ -362,15 +381,66 @@ document.getElementById('rc2Back').onclick=function(){show('scrLogin');};
 
 /* ---------- панель ---------- */
 document.getElementById('logout').onclick=function(){setToken('');DATA=null;route();};
-document.getElementById('refresh').onclick=function(){loadPanel();};
+document.getElementById('refresh').onclick=function(){ if(DATA&&DATA.poll) selectPoll(DATA.poll.id); else loadPanel(); };
 
-function loadPanel(){ api('admin_data',{token:token()}).then(function(r){ if(r.ok)enterPanel(r); else {setToken('');route();} }); }
-function enterPanel(r){
-  DATA=r; show('panel');
-  document.getElementById('qtitle').textContent=r.question||'Результати';
-  document.getElementById('meBox').textContent=(r.me&&r.me.email)?('Ви: '+r.me.email):'';
-  renderVotes(r); loadAdmins();
+function loadPanel(){
+  api('admin_polls',{token:token()}).then(function(r){
+    if(!r.ok){ setToken(''); route(); return; }
+    show('panel'); renderPolls(r.polls); loadAdmins();
+    var act=r.polls.filter(function(p){return p.status==='active';})[0] || r.polls[0];
+    if(act){ selectPoll(act.id); }
+    else { DATA=null; document.getElementById('qtitle').textContent='Немає голосувань — створіть нове'; clearStats(); }
+  });
 }
+function loadPolls(){ api('admin_polls',{token:token()}).then(function(r){ if(r.ok) renderPolls(r.polls); }); }
+function clearStats(){ ['s-yes','s-no','s-ab','s-tot'].forEach(function(i){document.getElementById(i).textContent='0';}); document.querySelector('#tbl tbody').innerHTML=''; }
+
+function renderPolls(polls){
+  var tb=document.querySelector('#pollsTbl tbody'); tb.innerHTML='';
+  if(!polls.length){ tb.innerHTML='<tr><td style="color:var(--mut)">Голосувань ще немає. Натисніть «Нове голосування».</td></tr>'; return; }
+  polls.forEach(function(p){
+    var st=p.status==='active'?'<span class="st st-active">Активне</span>':'<span class="st" style="background:rgba(255,255,255,.08);color:var(--mut)">Закрите</span>';
+    var act='<button class="tiny" data-sel="'+p.id+'">Результати</button> ';
+    if(p.status==='active') act+='<button class="tiny ban" data-close="'+p.id+'">Закрити</button>';
+    else act+='<button class="tiny ok2" data-act="'+p.id+'">Активувати</button>';
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td data-label="Питання">'+esc(p.question)+'</td><td data-label="Статус">'+st+'</td><td data-label="Голосів">'+p.total+'</td><td data-label="Дії">'+act+'</td>';
+    tb.appendChild(tr);
+  });
+  tb.querySelectorAll('button[data-sel]').forEach(function(b){ b.onclick=function(){selectPoll(+b.dataset.sel);}; });
+  tb.querySelectorAll('button[data-close]').forEach(function(b){ b.onclick=function(){setPollStatus(+b.dataset.close,'closed');}; });
+  tb.querySelectorAll('button[data-act]').forEach(function(b){ b.onclick=function(){setPollStatus(+b.dataset.act,'active');}; });
+}
+function selectPoll(id){
+  api('admin_poll_data',{token:token(),poll_id:id}).then(function(r){
+    if(!r.ok){ alert(r.error||'Помилка'); return; }
+    DATA={poll:r.poll, results:r.results, rows:r.rows, question:r.poll.question, me:r.me};
+    document.getElementById('qtitle').textContent='Результати: '+r.poll.question;
+    document.getElementById('meBox').textContent=(r.me&&r.me.email)?('Ви: '+r.me.email):'';
+    renderVotes(r);
+  });
+}
+function setPollStatus(id,status){
+  api('admin_set_status',{token:token(),poll_id:id,status:status}).then(function(r){
+    if(!r.ok){alert(r.error||'Помилка');return;}
+    loadPolls(); if(DATA&&DATA.poll&&DATA.poll.id===id) selectPoll(id);
+  });
+}
+
+/* створення голосування */
+document.getElementById('newPollBtn').onclick=function(){ var f=document.getElementById('newPollForm'); f.style.display=(f.style.display==='none')?'block':'none'; document.getElementById('newPollQ').value=''; setMsg('pollMsg','',''); };
+document.getElementById('cancelPollBtn').onclick=function(){ document.getElementById('newPollForm').style.display='none'; };
+document.getElementById('createPollBtn').onclick=function(){
+  var q=document.getElementById('newPollQ').value.trim();
+  if(q.length<5){ setMsg('pollMsg','Введіть питання (мін. 5 символів)','err'); return; }
+  var b=this; b.disabled=true;
+  api('admin_create_poll',{token:token(),question:q}).then(function(r){
+    b.disabled=false;
+    if(!r.ok){ setMsg('pollMsg',r.error||'Помилка','err'); return; }
+    document.getElementById('newPollForm').style.display='none';
+    loadPolls(); selectPoll(r.id);
+  });
+};
 function renderVotes(res){
   var x=res.results;
   document.getElementById('s-yes').textContent=x.yes;document.getElementById('s-no').textContent=x.no;
@@ -447,7 +517,7 @@ function pdfShort(){
     '<div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #0f172a;padding-bottom:16px;">'+
       '<div style="font-family:Unbounded,Arial;font-weight:700;font-size:27px;">ЖБК «Метробудівник-3»</div>'+
       '<div style="font-size:14px;color:#64748b;">'+today()+'</div></div>'+
-    '<div style="font-size:24px;font-weight:700;margin:30px 0 4px;">Чи потрібне нам резервне опалення?</div>'+
+    '<div style="font-size:24px;font-weight:700;margin:30px 0 4px;">'+esc((DATA.poll&&DATA.poll.question)||'Голосування')+'</div>'+
     '<div style="font-size:15px;color:#64748b;margin-bottom:30px;">Результати голосування</div>'+
     '<div style="display:flex;gap:22px;">'+
       col(r.yes,'Так',  '#16a34a',pct(r.yes,r.total))+
@@ -482,7 +552,7 @@ function pdfFull(){
     '<div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #0f172a;padding-bottom:14px;">'+
       '<div style="font-family:Unbounded,Arial;font-weight:700;font-size:23px;">ЖБК «Метробудівник-3» — детальний звіт</div>'+
       '<div style="font-size:13px;color:#64748b;">'+today()+'</div></div>'+
-    '<div style="font-size:18px;font-weight:700;margin:20px 0 6px;">Чи потрібне нам резервне опалення?</div>'+
+    '<div style="font-size:18px;font-weight:700;margin:20px 0 6px;">'+esc((DATA.poll&&DATA.poll.question)||'Голосування')+'</div>'+
     '<div style="font-size:14px;margin-bottom:20px;">'+
       '<b style="color:#16a34a;">Так: '+r.yes+' ('+pct(r.yes,r.total)+'%)</b>　　'+
       '<b style="color:#dc2626;">Ні: '+r.no+' ('+pct(r.no,r.total)+'%)</b>　　'+
@@ -509,9 +579,10 @@ function tgPreview(){
 }
 document.getElementById('tgPublish').onclick=function(){
   var b=this;
+  if(!DATA||!DATA.poll){ alert('Спочатку оберіть голосування'); return; }
   if(!confirm('Опублікувати результати в Telegram-канал?\n\n'+tgPreview())) return;
   b.disabled=true;
-  api('admin_publish',{token:token()}).then(function(res){
+  api('admin_publish',{token:token(),poll_id:DATA.poll.id}).then(function(res){
     b.disabled=false;
     if(res.demo){ alert('🧪 Тестовий режим — реально не надіслано.\nПісля підключення бекенду й бота повідомлення піде в канал. Текст:\n\n'+tgPreview()); return; }
     if(res.ok) alert('✅ Опубліковано в Telegram-канал.');

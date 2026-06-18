@@ -114,14 +114,21 @@
 <div class="wrap">
 
   <div class="badge"><span class="flame"></span> ЖБК «Метробудівник-3»</div>
-  <h1>Резервне опалення</h1>
+  <h1>Голосування</h1>
+
+  <!-- НЕМАЄ АКТИВНОГО -->
+  <div class="card" id="nopoll" style="display:none;text-align:center">
+    <div style="font-size:34px;margin-bottom:6px">🗳️</div>
+    <div style="font-family:'Unbounded';font-weight:700;font-size:18px;margin-bottom:6px">Наразі немає активного голосування</div>
+    <div style="color:var(--mut);font-size:14px">Завітайте пізніше — адміністратор скоро створить нове.</div>
+  </div>
 
   <!-- ПРАВИЛА -->
-  <div class="card" id="rules">
+  <div class="card" id="rules" style="display:none">
     <div style="font-family:'Unbounded';font-weight:700;font-size:18px;margin-bottom:12px">Правила голосування</div>
     <div style="font-size:15px;line-height:1.6;color:#cdd3df">
-      Це опитування щодо встановлення <b>резервного опалення</b> у нашому будинку
-      <b>ЖБК «Метробудівник-3»</b>.
+      Це голосування мешканців <b>ЖБК «Метробудівник-3»</b>.
+      <div id="ruleQ" style="margin-top:10px;padding:12px 14px;border-radius:12px;background:rgba(255,138,61,.12);font-weight:700;color:#fff">—</div>
       <div style="margin-top:14px;font-weight:700;color:#fff">Умови голосування:</div>
       <ul style="margin:8px 0 0;padding-left:20px">
         <li style="margin-bottom:7px"><b>Одна квартира — один голос.</b> Це найважливіше.</li>
@@ -134,7 +141,7 @@
 
   <!-- ФОРМА -->
   <div class="card" id="form" style="display:none">
-    <div style="font-family:'Unbounded';font-weight:700;font-size:18px;margin-bottom:4px">Чи потрібне нам резервне опалення?</div>
+    <div id="formQ" style="font-family:'Unbounded';font-weight:700;font-size:18px;margin-bottom:4px">—</div>
     <div style="color:var(--mut);font-size:13.5px">Одна квартира — один голос. Змінити голос не можна.</div>
 
     <label>Номер квартири</label>
@@ -212,23 +219,31 @@ var FIO_RE=/^[А-Яа-яЁёЇїІіЄєҐґ'’\-]{2,}(\s+[А-Яа-яЁёЇїІ
 function bad(id,on){document.getElementById(id).classList[on?'add':'remove']('bad');}
 function showMsg(t,c){var m=document.getElementById('msg');m.textContent=t;m.className='msg '+c;}
 
+var CURRENT_POLL=null;
+function voteKey(){ return 'dom_vote_'+(CURRENT_POLL||'x'); }
+
 // Кнопка "Зрозуміло" — сховати правила, показати форму
 document.getElementById('rulesOk').onclick=function(){
   document.getElementById('rules').style.display='none';
   document.getElementById('form').style.display='block';
 };
 
-// Якщо вже голосували з цього пристрою — одразу показати результати (без правил)
+// Завантажуємо активне голосування
 window.addEventListener('load',function(){
-  var v=null; try{v=JSON.parse(localStorage.getItem(VOTE_KEY));}catch(e){}
-  if(v&&v.choice){
-    document.getElementById('rules').style.display='none';
-    fetchResults(function(r){
+  fetch(SCRIPT_URL).then(function(r){return r.json();}).then(function(res){
+    if(!res.poll){ document.getElementById('nopoll').style.display='block'; return; }
+    CURRENT_POLL=res.poll.id;
+    document.getElementById('ruleQ').textContent=res.poll.question;
+    document.getElementById('formQ').textContent=res.poll.question;
+    var v=null; try{v=JSON.parse(localStorage.getItem(voteKey()));}catch(e){}
+    if(v&&v.choice){
       var L={yes:'Так',no:'Ні',abstain:'Утримався'};
       document.getElementById('myvote').innerHTML='Ви вже проголосували (кв. <b>'+v.apt+'</b>): <b>'+L[v.choice]+'</b>. Дякуємо!';
-      renderResults(r);
-    });
-  }
+      renderResults(res.results);
+    } else {
+      document.getElementById('rules').style.display='block';
+    }
+  }).catch(function(){ document.getElementById('nopoll').style.display='block'; });
 });
 function fetchResults(cb){
   if(DEMO){cb(demoTally());return;}
@@ -270,14 +285,14 @@ document.getElementById('send').onclick=function(){
   Promise.all([getIpInfo(),getGps()]).then(function(a){
     var ip=a[0]||{},gps=a[1]||{};
     var payload={
-      apt:apt, place:'кв. '+apt,
+      poll_id:CURRENT_POLL, apt:apt, place:'кв. '+apt,
       fio:fio, phone:digits, choice:sel,
       ip:ip.ip||'',ipCity:ip.city||'',ipRegion:ip.region||'',ipCountry:ip.country_name||'',
       lat:gps.lat||'',lon:gps.lon||'',acc:gps.acc||'',device:deviceName(),ua:navigator.userAgent};
     return sendVote(payload);
   }).then(function(res){
     if(res.ok){
-      try{localStorage.setItem(VOTE_KEY,JSON.stringify({apt:apt,choice:sel}));}catch(e){}
+      try{localStorage.setItem(voteKey(),JSON.stringify({apt:apt,choice:sel}));}catch(e){}
       var L={yes:'Так',no:'Ні',abstain:'Утримався'};
       document.getElementById('myvote').innerHTML='Ваш голос (кв. <b>'+apt+'</b>): <b>'+L[sel]+'</b>. Дякуємо!';
       renderResults(res.results);
