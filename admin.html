@@ -224,17 +224,22 @@
 
     <!-- НАЛАШТУВАННЯ TELEGRAM -->
     <div class="card">
-      <h2 style="margin:0 0 4px">📢 Telegram</h2>
-      <div class="mut" style="margin-bottom:10px">Куди публікувати результати. Створіть бота в <b>@BotFather</b>, додайте його адміністратором у свій канал.</div>
-      <label style="display:block;font-size:13px;color:var(--mut);margin-bottom:4px">Токен бота</label>
-      <input id="tgToken" type="password" placeholder="напр. 123456:ABC-DEF...">
-      <label style="display:block;font-size:13px;color:var(--mut);margin:10px 0 4px">Канал (@username або chat_id)</label>
-      <input id="tgChannel" placeholder="напр. @metrobudivnyk3">
-      <div class="row" style="margin-top:12px">
-        <button id="tgSave">Зберегти</button>
-        <button class="alt" id="tgTest">Надіслати тест</button>
+      <div id="tgToggle" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer">
+        <h2 style="margin:0">📢 Telegram <span id="tgState" style="font-size:12px;font-weight:600;color:var(--mut)"></span></h2>
+        <span id="tgChevron" style="color:var(--mut);font-size:18px">▸</span>
       </div>
-      <div class="msg" id="tgMsg"></div>
+      <div id="tgBody" style="display:none;margin-top:12px">
+        <div class="mut" style="margin-bottom:10px">Куди публікувати результати. Створіть бота в <b>@BotFather</b>, додайте його адміністратором у свій канал.</div>
+        <label style="display:block;font-size:13px;color:var(--mut);margin-bottom:4px">Токен бота</label>
+        <input id="tgToken" type="password" placeholder="напр. 123456:ABC-DEF...">
+        <label style="display:block;font-size:13px;color:var(--mut);margin:10px 0 4px">Канал (@username або chat_id)</label>
+        <input id="tgChannel" placeholder="напр. @metrobudivnyk3">
+        <div class="row" style="margin-top:12px">
+          <button id="tgSave">Зберегти</button>
+          <button class="alt" id="tgTest">Надіслати тест</button>
+        </div>
+        <div class="msg" id="tgMsg"></div>
+      </div>
     </div>
 
     <div class="card">
@@ -792,11 +797,17 @@ document.getElementById('tgPublish').onclick=function(){
 };
 
 /* ---------- Налаштування Telegram ---------- */
+document.getElementById('tgToggle').onclick=function(){
+  var b=document.getElementById('tgBody'), open=b.style.display!=='none';
+  b.style.display=open?'none':'block';
+  document.getElementById('tgChevron').textContent=open?'▸':'▾';
+};
 function loadTgSettings(){
   api('admin_get_settings',{token:token()}).then(function(r){
     if(!r.ok)return;
     document.getElementById('tgChannel').value=r.tg_channel||'';
     document.getElementById('tgToken').placeholder = r.tg_token_set ? '•••••• (токен збережено, введіть новий для заміни)' : 'напр. 123456:ABC-DEF...';
+    document.getElementById('tgState').textContent = r.tg_token_set ? '· налаштовано ✅' : '· не налаштовано';
   });
 }
 document.getElementById('tgSave').onclick=function(){
