@@ -24,6 +24,8 @@
   input:focus{border-color:var(--warm)}
   button{padding:12px 17px;border:0;border-radius:12px;background:linear-gradient(92deg,var(--warm),var(--warm2));color:#fff;font-weight:700;cursor:pointer;font-size:14px;font-family:inherit;white-space:nowrap}
   button.tg{background:linear-gradient(92deg,#2aabee,#229ed9)}
+  .modebtn{background:linear-gradient(92deg,var(--warm),var(--warm2))}
+  .modebtn.alt{background:#262b35}
   button.alt{background:#262b35}
   button.tiny{padding:7px 11px;font-size:12.5px;border-radius:9px}
   button.ban{background:#3a2030;color:#ffb0b2}
@@ -177,7 +179,13 @@
       </div>
       <div id="newPollForm" style="display:none;margin-top:12px">
         <input id="newPollQ" placeholder="Текст питання (напр.: Чи ставимо новий домофон?)">
-        <div class="row" style="margin-top:8px">
+        <div class="mut" style="margin:10px 0 6px">Режим голосування:</div>
+        <div class="row" id="modePick">
+          <button class="modebtn" data-m="identified">👤 Іменне (ПІБ + телефон)</button>
+          <button class="modebtn alt" data-m="code">🕵️ Анонімне за кодом</button>
+        </div>
+        <div class="mut" id="modeHint" style="margin-top:6px">Іменне: видно хто і як проголосував.</div>
+        <div class="row" style="margin-top:10px">
           <button id="createPollBtn">Створити (зробити активним)</button>
           <button class="alt" id="cancelPollBtn">Скасувати</button>
         </div>
@@ -219,8 +227,8 @@
     <div class="card">
       <h2>Усі голоси (повні дані)</h2>
       <div class="scroll">
-        <div class="mut" style="margin-bottom:8px">Натисніть на рядок, щоб побачити повну інформацію (IP, місто, GPS, пристрій).</div>
-        <table id="tbl" class="resp"><thead><tr>
+        <div class="mut" style="margin-bottom:8px" id="votesNote">Натисніть на рядок, щоб побачити повну інформацію (IP, місто, GPS, пристрій).</div>
+        <table id="tbl" class="resp"><thead><tr id="tblHead">
           <th>#</th><th>Час</th><th>Кв.№</th><th>ПІБ</th><th>Телефон</th><th>Відповідь</th>
         </tr></thead><tbody></tbody></table>
       </div>
@@ -430,6 +438,8 @@ function renderPolls(polls){
   if(!polls.length){ tb.innerHTML='<tr><td style="color:var(--mut)">Голосувань ще немає. Натисніть «Нове голосування».</td></tr>'; return; }
   polls.forEach(function(p){
     var st=p.status==='active'?'<span class="st st-active">Активне</span>':'<span class="st" style="background:rgba(255,255,255,.08);color:var(--mut)">Закрите</span>';
+    var md=p.mode==='code'?' <span class="st" style="background:rgba(123,45,255,.18);color:#c4b5fd">🕵️ Анонімне</span>':' <span class="st" style="background:rgba(255,255,255,.06);color:var(--mut)">👤 Іменне</span>';
+    st+=md;
     var act='<button class="tiny" data-sel="'+p.id+'">Результати</button> ';
     if(p.status==='active') act+='<button class="tiny ban" data-close="'+p.id+'">Закрити</button>';
     else act+='<button class="tiny ok2" data-act="'+p.id+'">Активувати</button>';
@@ -460,11 +470,18 @@ function setPollStatus(id,status){
 /* створення голосування */
 document.getElementById('newPollBtn').onclick=function(){ var f=document.getElementById('newPollForm'); f.style.display=(f.style.display==='none')?'block':'none'; document.getElementById('newPollQ').value=''; setMsg('pollMsg','',''); };
 document.getElementById('cancelPollBtn').onclick=function(){ document.getElementById('newPollForm').style.display='none'; };
+var NEW_MODE='identified';
+document.querySelectorAll('#modePick .modebtn').forEach(function(b){
+  b.onclick=function(){ NEW_MODE=b.dataset.m; document.querySelectorAll('#modePick .modebtn').forEach(function(x){x.className='modebtn alt';}); b.className='modebtn';
+    document.getElementById('modeHint').textContent = NEW_MODE==='code'
+      ? 'Анонімне: видно лише ЯКІ квартири проголосували, але НЕ як саме. Голосують за номером квартири + код.'
+      : 'Іменне: видно хто і як проголосував (ПІБ, телефон).'; };
+});
 document.getElementById('createPollBtn').onclick=function(){
   var q=document.getElementById('newPollQ').value.trim();
   if(q.length<5){ setMsg('pollMsg','Введіть питання (мін. 5 символів)','err'); return; }
   var b=this; b.disabled=true;
-  api('admin_create_poll',{token:token(),question:q}).then(function(r){
+  api('admin_create_poll',{token:token(),question:q,mode:NEW_MODE}).then(function(r){
     b.disabled=false;
     if(!r.ok){ setMsg('pollMsg',r.error||'Помилка','err'); return; }
     document.getElementById('newPollForm').style.display='none';
@@ -476,6 +493,21 @@ function renderVotes(res){
   document.getElementById('s-yes').textContent=x.yes;document.getElementById('s-no').textContent=x.no;
   document.getElementById('s-ab').textContent=x.abstain;document.getElementById('s-tot').textContent=x.total;
   var tb=document.querySelector('#tbl tbody');tb.innerHTML='';
+  var head=document.getElementById('tblHead'), note=document.getElementById('votesNote');
+
+  // АНОНІМНЕ за кодом: показуємо лише ЯКІ квартири проголосували (без особистих даних і без вибору)
+  if(res.poll && res.poll.mode==='code'){
+    head.innerHTML='<th>#</th><th>Час</th><th>Кв. №</th><th>Статус</th>';
+    note.innerHTML='🕵️ <b>Анонімне голосування.</b> Видно лише, які квартири проголосували — але НЕ як саме вони проголосували. Усього проголосувало квартир: <b>'+(res.votedApts?res.votedApts.length:0)+'</b>.';
+    (res.votedApts||[]).forEach(function(a,i){
+      var tr=document.createElement('tr');
+      tr.innerHTML='<td data-label="#">'+(i+1)+'</td><td data-label="Час">'+fmt(a.time)+'</td><td data-label="Кв. №"><b>'+esc(a.apt)+'</b></td><td data-label="Статус"><span class="tag t-yes">✔ проголосувала</span></td>';
+      tb.appendChild(tr);
+    });
+    return;
+  }
+  head.innerHTML='<th>#</th><th>Час</th><th>Кв.№</th><th>ПІБ</th><th>Телефон</th><th>Відповідь</th>';
+  note.innerHTML='Натисніть на рядок, щоб побачити повну інформацію (IP, місто, GPS, пристрій).';
   res.rows.forEach(function(v,i){
     var gps=(v.lat&&v.lon)?'<a class="geo" target="_blank" href="https://maps.google.com/?q='+v.lat+','+v.lon+'">'+(+v.lat).toFixed(4)+', '+(+v.lon).toFixed(4)+'</a>':'—';
     var cls=v.choice==='yes'?'t-yes':v.choice==='no'?'t-no':'t-ab';
