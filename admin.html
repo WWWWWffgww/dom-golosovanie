@@ -196,6 +196,7 @@
 
         <label style="display:block;font-size:13px;color:var(--mut);margin:10px 0 4px">Тривалість</label>
         <select id="newPollDur" style="width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--line);background:#0e1015;color:var(--tx);font-size:15px;font-family:inherit">
+          <option value="-1">Не змінювати термін (при редагуванні)</option>
           <option value="0">Без обмеження (закрию вручну)</option>
           <option value="1">1 день</option>
           <option value="3">3 дні</option>
@@ -483,8 +484,9 @@ function renderPolls(polls){
     var md=p.mode==='code'?' <span class="st" style="background:rgba(123,45,255,.18);color:#c4b5fd">🕵️ Анонімне</span>':' <span class="st" style="background:rgba(255,255,255,.06);color:var(--mut)">👤 Іменне</span>';
     st+=md;
     var act='<button class="tiny" data-sel="'+p.id+'">Результати</button> ';
+    if(!p.published) act+='<button class="tiny alt" data-edit="'+p.id+'">✏️ Редагувати</button> ';
     if(p.status==='active') act+='<button class="tiny ban" data-close="'+p.id+'">Закрити</button>';
-    else act+='<button class="tiny ok2" data-act="'+p.id+'">Активувати</button>';
+    else if(!p.published) act+='<button class="tiny ok2" data-act="'+p.id+'">Активувати</button>';
     var tr=document.createElement('tr');
     tr.innerHTML='<td data-label="Питання">'+esc(p.question)+'</td><td data-label="Статус">'+st+'</td><td data-label="Голосів">'+p.total+'</td><td data-label="Дії">'+act+'</td>';
     tb.appendChild(tr);
@@ -492,6 +494,7 @@ function renderPolls(polls){
   tb.querySelectorAll('button[data-sel]').forEach(function(b){ b.onclick=function(){selectPoll(+b.dataset.sel);}; });
   tb.querySelectorAll('button[data-close]').forEach(function(b){ b.onclick=function(){setPollStatus(+b.dataset.close,'closed');}; });
   tb.querySelectorAll('button[data-act]').forEach(function(b){ b.onclick=function(){setPollStatus(+b.dataset.act,'active');}; });
+  tb.querySelectorAll('button[data-edit]').forEach(function(b){ b.onclick=function(){editPoll(+b.dataset.edit);}; });
 }
 function selectPoll(id){
   api('admin_poll_data',{token:token(),poll_id:id}).then(function(r){
@@ -509,33 +512,69 @@ function setPollStatus(id,status){
   });
 }
 
-/* створення голосування */
-document.getElementById('newPollBtn').onclick=function(){ var f=document.getElementById('newPollForm'); f.style.display=(f.style.display==='none')?'block':'none'; document.getElementById('newPollQ').value=''; setMsg('pollMsg','',''); };
-document.getElementById('cancelPollBtn').onclick=function(){ document.getElementById('newPollForm').style.display='none'; };
-var NEW_MODE='identified';
-document.querySelectorAll('#modePick .modebtn').forEach(function(b){
-  b.onclick=function(){ NEW_MODE=b.dataset.m; document.querySelectorAll('#modePick .modebtn').forEach(function(x){x.className='modebtn alt';}); b.className='modebtn';
-    document.getElementById('modeHint').textContent = NEW_MODE==='code'
-      ? 'Анонімне: видно лише ЯКІ квартири проголосували, але НЕ як саме. Голосують за номером квартири + код.'
-      : 'Іменне: видно хто і як проголосував (ПІБ, телефон).'; };
-});
+/* створення / редагування голосування */
+var NEW_MODE='identified', EDIT_ID=null;
+function setNewMode(m){ NEW_MODE=m; document.querySelectorAll('#modePick .modebtn').forEach(function(x){x.className='modebtn alt';}); var sel=document.querySelector('#modePick .modebtn[data-m="'+m+'"]'); if(sel)sel.className='modebtn';
+  document.getElementById('modeHint').textContent = m==='code'
+    ? 'Анонімне: видно лише ЯКІ квартири проголосували, але НЕ як саме. Голосують за номером квартири + код.'
+    : 'Іменне: видно хто і як проголосував (ПІБ, телефон).'; }
+function resetPollForm(){ EDIT_ID=null;
+  document.getElementById('newPollQ').value=''; document.getElementById('newPollDesc').value='';
+  document.getElementById('newPollOpts').value='Так\nНі\nУтримався'; document.getElementById('newPollDur').value='7';
+  document.getElementById('newPollOpts').disabled=false; document.querySelectorAll('#modePick .modebtn').forEach(function(b){b.disabled=false;});
+  setNewMode('identified'); setMsg('pollMsg','','');
+  document.getElementById('createPollBtn').textContent='Створити (зробити активним)';
+  document.getElementById('newPollFormTitle') && (document.getElementById('newPollFormTitle').textContent='');
+}
+document.getElementById('newPollBtn').onclick=function(){ var f=document.getElementById('newPollForm'); var open=f.style.display!=='none'; if(open){f.style.display='none';return;} resetPollForm(); f.style.display='block'; };
+document.getElementById('cancelPollBtn').onclick=function(){ document.getElementById('newPollForm').style.display='none'; resetPollForm(); };
+document.querySelectorAll('#modePick .modebtn').forEach(function(b){ b.onclick=function(){ if(!b.disabled) setNewMode(b.dataset.m); }; });
 document.querySelectorAll('#optPreset button').forEach(function(b){
-  b.onclick=function(){ document.getElementById('newPollOpts').value=b.dataset.opts.split('|').join('\n'); };
+  b.onclick=function(){ if(!document.getElementById('newPollOpts').disabled) document.getElementById('newPollOpts').value=b.dataset.opts.split('|').join('\n'); };
 });
+function editPoll(id){
+  api('admin_poll_data',{token:token(),poll_id:id}).then(function(r){
+    if(!r.ok){ alert(r.error||'Помилка'); return; }
+    EDIT_ID=id;
+    document.getElementById('newPollQ').value=r.poll.question||'';
+    document.getElementById('newPollDesc').value=r.poll.description||'';
+    document.getElementById('newPollOpts').value=(r.poll.options||[]).join('\n');
+    document.getElementById('newPollDur').value='-1'; // не змінювати термін
+    setNewMode(r.poll.mode||'identified');
+    var hasVotes=(r.results&&r.results.total)>0;
+    document.getElementById('newPollOpts').disabled=hasVotes;
+    document.querySelectorAll('#modePick .modebtn').forEach(function(b){b.disabled=hasVotes;});
+    setMsg('pollMsg', hasVotes ? '⚠️ Вже є голоси — варіанти та режим змінити не можна, лише заголовок/опис/термін.' : '', hasVotes?'info':'');
+    document.getElementById('createPollBtn').textContent='Зберегти зміни';
+    document.getElementById('newPollForm').style.display='block';
+    document.getElementById('newPollForm').scrollIntoView();
+  });
+}
 document.getElementById('createPollBtn').onclick=function(){
   var q=document.getElementById('newPollQ').value.trim();
   var desc=document.getElementById('newPollDesc').value.trim();
   var opts=document.getElementById('newPollOpts').value.split('\n').map(function(s){return s.trim();}).filter(Boolean);
-  var dur=parseInt(document.getElementById('newPollDur').value,10)||0;
+  var durv=document.getElementById('newPollDur').value;
   if(q.length<5){ setMsg('pollMsg','Введіть заголовок (мін. 5 символів)','err'); return; }
   if(opts.length<2){ setMsg('pollMsg','Потрібно щонайменше 2 варіанти відповіді','err'); return; }
   var b=this; b.disabled=true;
-  api('admin_create_poll',{token:token(),question:q,description:desc,options:opts,durationDays:dur,mode:NEW_MODE}).then(function(r){
-    b.disabled=false;
-    if(!r.ok){ setMsg('pollMsg',r.error||'Помилка','err'); return; }
-    document.getElementById('newPollForm').style.display='none';
-    loadPolls(); selectPoll(r.id);
-  });
+  if(EDIT_ID){
+    var dur = durv==='-1' ? -1 : (parseInt(durv,10)||0);
+    api('admin_update_poll',{token:token(),poll_id:EDIT_ID,question:q,description:desc,options:opts,durationDays:dur,mode:NEW_MODE}).then(function(r){
+      b.disabled=false;
+      if(!r.ok){ setMsg('pollMsg',r.error||'Помилка','err'); return; }
+      var pid=EDIT_ID; document.getElementById('newPollForm').style.display='none'; resetPollForm();
+      loadPolls(); selectPoll(pid);
+    });
+  } else {
+    var dur2=parseInt(durv,10)||0;
+    api('admin_create_poll',{token:token(),question:q,description:desc,options:opts,durationDays:dur2,mode:NEW_MODE}).then(function(r){
+      b.disabled=false;
+      if(!r.ok){ setMsg('pollMsg',r.error||'Помилка','err'); return; }
+      document.getElementById('newPollForm').style.display='none'; resetPollForm();
+      loadPolls(); selectPoll(r.id);
+    });
+  }
 };
 var PAL=['#22e07b','#ff5a5f','#ffc53d','#3b82f6','#a479e2','#ff8a3d','#2aabee','#f06292'];
 function optLabel(opts,c){ var i=parseInt(c,10); return (opts&&opts[i]!=null)?opts[i]:c; }
