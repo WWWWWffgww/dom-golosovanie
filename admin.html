@@ -53,7 +53,13 @@
   .st-pending{background:rgba(255,197,61,.16);color:#ffe39a}
   .st-banned{background:rgba(255,90,95,.16);color:#ffb0b2}
   .scroll{overflow:auto;max-height:60vh;-webkit-overflow-scrolling:touch}
-  .scroll table{min-width:760px}
+  .scroll table{min-width:520px}
+  .vrow:hover{background:rgba(255,255,255,.03)}
+  .vdetail td{background:rgba(255,138,61,.06);padding:8px 12px}
+  .detgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 24px}
+  .detrow{display:flex;justify-content:space-between;gap:14px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--line)}
+  .detrow span{color:var(--mut)}
+  @media(max-width:560px){ .detgrid{grid-template-columns:1fr} }
   a.geo{color:#7dd3fc;text-decoration:none}
   .hide{display:none}
   /* Адаптив: планшет/телефон */
@@ -82,6 +88,8 @@
     table.resp td{border:0;padding:6px 0;display:flex;justify-content:space-between;gap:14px;text-align:right;font-size:13.5px}
     table.resp td::before{content:attr(data-label);color:var(--mut);font-weight:600;text-align:left;flex:0 0 40%;white-space:nowrap}
     table.resp td:empty{display:none}
+    table.resp .vdetail td{display:block !important}
+    table.resp .vdetail td::before{content:none !important}
   }
 </style>
 </head>
@@ -211,9 +219,9 @@
     <div class="card">
       <h2>Усі голоси (повні дані)</h2>
       <div class="scroll">
+        <div class="mut" style="margin-bottom:8px">Натисніть на рядок, щоб побачити повну інформацію (IP, місто, GPS, пристрій).</div>
         <table id="tbl" class="resp"><thead><tr>
-          <th>#</th><th>Час</th><th>Кв.№</th><th>Розташування</th><th>ПІБ</th><th>Телефон</th><th>Відповідь</th>
-          <th>IP</th><th>Місто</th><th>Країна</th><th>GPS</th><th>Точн.</th><th>Пристрій</th>
+          <th>#</th><th>Час</th><th>Кв.№</th><th>ПІБ</th><th>Телефон</th><th>Відповідь</th>
         </tr></thead><tbody></tbody></table>
       </div>
     </div>
@@ -471,12 +479,19 @@ function renderVotes(res){
   res.rows.forEach(function(v,i){
     var gps=(v.lat&&v.lon)?'<a class="geo" target="_blank" href="https://maps.google.com/?q='+v.lat+','+v.lon+'">'+(+v.lat).toFixed(4)+', '+(+v.lon).toFixed(4)+'</a>':'—';
     var cls=v.choice==='yes'?'t-yes':v.choice==='no'?'t-no':'t-ab';
-    var tr=document.createElement('tr');
-    tr.innerHTML='<td data-label="#">'+(i+1)+'</td><td data-label="Час">'+fmt(v.time)+'</td><td data-label="Кв.№">'+esc(v.apt)+'</td><td data-label="Розташування">'+esc(v.place)+'</td><td data-label="ПІБ">'+esc(v.fio)+'</td><td data-label="Телефон">'+esc(v.phone)+'</td>'+
-      '<td data-label="Відповідь"><span class="tag '+cls+'">'+(L[v.choice]||v.choice)+'</span></td><td data-label="IP">'+esc(v.ip)+'</td><td data-label="Місто">'+esc(v.ipCity)+'</td><td data-label="Країна">'+esc(v.ipCountry)+'</td><td data-label="GPS">'+gps+'</td><td data-label="Точн.">'+esc(v.acc)+'</td><td data-label="Пристрій">'+esc(v.device)+'</td>';
-    tb.appendChild(tr);
+    var tr=document.createElement('tr'); tr.className='vrow'; tr.style.cursor='pointer';
+    tr.innerHTML='<td data-label="#">'+(i+1)+' <span style="color:var(--mut)">▸</span></td><td data-label="Час">'+fmt(v.time)+'</td><td data-label="Кв.№"><b>'+esc(v.apt)+'</b></td><td data-label="ПІБ">'+esc(v.fio)+'</td><td data-label="Телефон">'+esc(v.phone)+'</td>'+
+      '<td data-label="Відповідь"><span class="tag '+cls+'">'+(L[v.choice]||v.choice)+'</span></td>';
+    var det=document.createElement('tr'); det.className='vdetail'; det.style.display='none';
+    det.innerHTML='<td colspan="6"><div class="detgrid">'+
+      detItem('Розташування',esc(v.place))+detItem('IP',esc(v.ip))+detItem('Місто',esc(v.ipCity))+
+      detItem('Країна',esc(v.ipCountry))+detItem('GPS',gps)+detItem('Точність (м)',esc(v.acc))+
+      detItem('Пристрій',esc(v.device))+'</div></td>';
+    tr.onclick=function(){ var open=det.style.display!=='none'; det.style.display=open?'none':''; tr.querySelector('span').textContent=open?'▸':'▾'; };
+    tb.appendChild(tr); tb.appendChild(det);
   });
 }
+function detItem(k,val){ return '<div class="detrow"><span>'+k+'</span><b>'+(val||'—')+'</b></div>'; }
 function loadAdmins(){
   api('admin_list',{token:token()}).then(function(r){
     if(!r.ok)return; var tb=document.querySelector('#adm tbody');tb.innerHTML='';
