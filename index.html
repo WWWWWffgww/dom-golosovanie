@@ -193,10 +193,15 @@
 
   <!-- РЕЗУЛЬТАТИ -->
   <div class="card" id="results">
-    <div style="font-family:'Unbounded';font-weight:700;font-size:20px;margin-bottom:6px">Результати</div>
+    <div style="font-family:'Unbounded';font-weight:700;font-size:20px;margin-bottom:4px">Результати</div>
+    <div id="resQ" style="font-weight:700;font-size:16px;color:#fff;line-height:1.3;margin-bottom:8px"></div>
     <div class="myvote" id="myvote"></div>
+    <div id="cdResults" style="display:none;margin-bottom:14px;font-size:13.5px;font-weight:600;color:#ffd9b8;background:rgba(255,138,61,.12);border:1px solid rgba(255,138,61,.3);padding:9px 12px;border-radius:11px"></div>
     <div class="bars" id="bars"></div>
     <div class="total" id="total">Усього голосів: 0</div>
+    <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line);text-align:center;color:#aab1c2;font-size:13.5px;line-height:1.5">
+      📣 Результати голосувань будуть оприлюднені в оголошеннях і в Telegram-каналі.
+    </div>
   </div>
 
   <div class="adminlink"><a href="admin.html">🔐 Адмін-панель</a></div>
@@ -234,12 +239,14 @@ function buildOptions(opts){
 var cdTimer=null;
 function startCountdown(ends){
   if(!ends) return;
-  var el=document.getElementById('countdown'); el.style.display='block';
+  var el=document.getElementById('countdown'), el2=document.getElementById('cdResults');
+  el.style.display='block'; el2.style.display='block';
   function tick(){
-    var ms=Number(ends)-Date.now();
-    if(ms<=0){ el.textContent='⏳ Час голосування вийшов.'; if(cdTimer)clearInterval(cdTimer); return; }
-    var d=Math.floor(ms/86400000), h=Math.floor(ms/3600000)%24, m=Math.floor(ms/60000)%60;
-    el.textContent='⏳ До завершення: '+(d>0?d+' дн ':'')+h+' год '+m+' хв';
+    var ms=Number(ends)-Date.now(), txt;
+    if(ms<=0){ txt='⏳ Час голосування вийшов.'; if(cdTimer)clearInterval(cdTimer); }
+    else { var d=Math.floor(ms/86400000), h=Math.floor(ms/3600000)%24, m=Math.floor(ms/60000)%60;
+      txt='⏳ До завершення: '+(d>0?d+' дн ':'')+h+' год '+m+' хв'; }
+    el.textContent=txt; el2.textContent=txt;
   }
   tick(); cdTimer=setInterval(tick,30000);
 }
@@ -270,6 +277,7 @@ window.addEventListener('load',function(){
     CURRENT_MODE=res.poll.mode||'identified';
     document.getElementById('ruleQ').textContent=res.poll.question;
     document.getElementById('formQ').textContent=res.poll.question;
+    document.getElementById('resQ').textContent=res.poll.question;
     if(res.poll.description) document.getElementById('formDesc').textContent=res.poll.description;
     buildOptions(res.poll.options||[]);
     if(CURRENT_MODE==='code'){

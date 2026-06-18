@@ -651,10 +651,10 @@ function renderApartments(list){
   if(!list.length){ tb.innerHTML='<tr><td colspan="6" style="color:var(--mut)">Нічого не знайдено</td></tr>'; return; }
   list.forEach(function(x){
     var tr=document.createElement('tr');
-    tr.innerHTML='<td data-label="Кв. №"><b>'+x.apt_no+'</b></td>'+
+    tr.innerHTML='<td data-label="Кв. №"><span style="display:inline-block;background:rgba(255,138,61,.18);color:#ffb27a;font-weight:800;font-size:16px;padding:3px 11px;border-radius:8px">'+x.apt_no+'</span></td>'+
       '<td data-label="Парадне">'+x.parade+'</td>'+
       '<td data-label="Поверх">'+x.floor+'</td>'+
-      '<td data-label="Код"><b class="codeval" style="font-size:17px;letter-spacing:1px">'+esc(x.code)+'</b> '+
+      '<td data-label="Код"><b class="codeval" style="display:inline-block;background:rgba(34,224,123,.14);color:#9ff0c2;font-size:19px;font-weight:800;letter-spacing:2px;padding:5px 13px;border-radius:9px;border:1px solid rgba(34,224,123,.3)">'+esc(x.code)+'</b> '+
         '<button class="tiny alt" data-cp="'+esc(x.code)+'" title="Копіювати">📋</button> '+
         '<button class="tiny alt" data-sh="'+x.apt_no+'~'+esc(x.code)+'" title="Поділитися">📤</button></td>'+
       '<td data-label="Оновлено" style="color:var(--mut)">'+(x.code_updated?fmt(x.code_updated):'—')+'</td>'+
