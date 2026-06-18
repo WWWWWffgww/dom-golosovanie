@@ -73,6 +73,15 @@
     .panel-head .row{justify-content:flex-start;flex-wrap:wrap;gap:8px}
     .panel-head .row button{padding:10px 13px;font-size:13px}
     #meBox{width:100%;margin-bottom:4px}
+    /* таблиці -> картки (без горизонтального скролу) */
+    .scroll{overflow:visible;max-height:none}
+    table.resp{min-width:0 !important}
+    table.resp thead{display:none}
+    table.resp, table.resp tbody, table.resp tr, table.resp td{display:block;width:auto}
+    table.resp tr{border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin-bottom:10px;background:rgba(255,255,255,.02)}
+    table.resp td{border:0;padding:6px 0;display:flex;justify-content:space-between;gap:14px;text-align:right;font-size:13.5px}
+    table.resp td::before{content:attr(data-label);color:var(--mut);font-weight:600;text-align:left;flex:0 0 40%;white-space:nowrap}
+    table.resp td:empty{display:none}
   }
 </style>
 </head>
@@ -176,14 +185,14 @@
       <h2>Адміністратори</h2>
       <div class="mut" style="margin-bottom:8px">Нові реєстрації неактивні, поки ви їх не підтвердите. Зайвих — банте.</div>
       <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-        <table id="adm" style="min-width:520px"><thead><tr><th>Email</th><th>Статус</th><th>Створено</th><th>Дії</th></tr></thead><tbody></tbody></table>
+        <table id="adm" class="resp" style="min-width:520px"><thead><tr><th>Email</th><th>Статус</th><th>Створено</th><th>Дії</th></tr></thead><tbody></tbody></table>
       </div>
     </div>
 
     <div class="card">
       <h2>Усі голоси (повні дані)</h2>
       <div class="scroll">
-        <table id="tbl"><thead><tr>
+        <table id="tbl" class="resp"><thead><tr>
           <th>#</th><th>Час</th><th>Кв.№</th><th>Розташування</th><th>ПІБ</th><th>Телефон</th><th>Відповідь</th>
           <th>IP</th><th>Місто</th><th>Країна</th><th>GPS</th><th>Точн.</th><th>Пристрій</th>
         </tr></thead><tbody></tbody></table>
@@ -371,8 +380,8 @@ function renderVotes(res){
     var gps=(v.lat&&v.lon)?'<a class="geo" target="_blank" href="https://maps.google.com/?q='+v.lat+','+v.lon+'">'+(+v.lat).toFixed(4)+', '+(+v.lon).toFixed(4)+'</a>':'—';
     var cls=v.choice==='yes'?'t-yes':v.choice==='no'?'t-no':'t-ab';
     var tr=document.createElement('tr');
-    tr.innerHTML='<td>'+(i+1)+'</td><td>'+fmt(v.time)+'</td><td>'+esc(v.apt)+'</td><td>'+esc(v.place)+'</td><td>'+esc(v.fio)+'</td><td>'+esc(v.phone)+'</td>'+
-      '<td><span class="tag '+cls+'">'+(L[v.choice]||v.choice)+'</span></td><td>'+esc(v.ip)+'</td><td>'+esc(v.ipCity)+'</td><td>'+esc(v.ipCountry)+'</td><td>'+gps+'</td><td>'+esc(v.acc)+'</td><td>'+esc(v.device)+'</td>';
+    tr.innerHTML='<td data-label="#">'+(i+1)+'</td><td data-label="Час">'+fmt(v.time)+'</td><td data-label="Кв.№">'+esc(v.apt)+'</td><td data-label="Розташування">'+esc(v.place)+'</td><td data-label="ПІБ">'+esc(v.fio)+'</td><td data-label="Телефон">'+esc(v.phone)+'</td>'+
+      '<td data-label="Відповідь"><span class="tag '+cls+'">'+(L[v.choice]||v.choice)+'</span></td><td data-label="IP">'+esc(v.ip)+'</td><td data-label="Місто">'+esc(v.ipCity)+'</td><td data-label="Країна">'+esc(v.ipCountry)+'</td><td data-label="GPS">'+gps+'</td><td data-label="Точн.">'+esc(v.acc)+'</td><td data-label="Пристрій">'+esc(v.device)+'</td>';
     tb.appendChild(tr);
   });
 }
@@ -389,7 +398,7 @@ function loadAdmins(){
         if(a.status==='banned')act+='<button class="tiny ok2" data-act="admin_unban" data-e="'+esc(a.email)+'">Розбанити</button>';
       }
       var tr=document.createElement('tr');
-      tr.innerHTML='<td>'+esc(a.email)+'</td><td>'+st+'</td><td>'+fmt(a.created)+'</td><td>'+act+'</td>';
+      tr.innerHTML='<td data-label="Email">'+esc(a.email)+'</td><td data-label="Статус">'+st+'</td><td data-label="Створено">'+fmt(a.created)+'</td><td data-label="Дії">'+act+'</td>';
       tb.appendChild(tr);
     });
     tb.querySelectorAll('button[data-act]').forEach(function(b){
