@@ -55,10 +55,10 @@
   .seg button{flex:1;min-width:44px;padding:11px 0;border-radius:12px;border:1px solid var(--line);
     background:rgba(255,255,255,.04);color:var(--tx);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;transition:.15s}
   .seg button.on{background:linear-gradient(92deg,var(--warm),var(--warm2));border-color:transparent;color:#fff;box-shadow:0 8px 22px -8px var(--warm2)}
-  select,input{width:100%;padding:15px 16px;border-radius:14px;border:1.5px solid rgba(255,255,255,.18);
-    background:#222636;color:#fff;font-family:inherit;font-size:16.5px;outline:none;transition:.15s;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
-  input::placeholder{color:#9298ab}
-  select:focus,input:focus{border-color:var(--warm);background:#262b3d;box-shadow:0 0 0 3px rgba(255,138,61,.25)}
+  select,input{width:100%;padding:15px 16px;border-radius:14px;border:2px solid rgba(255,255,255,.28);
+    background:#2c3346;color:#fff;font-family:inherit;font-size:16.5px;outline:none;transition:.15s}
+  input::placeholder{color:#aab1c5}
+  select:focus,input:focus{border-color:var(--warm);background:#323a50;box-shadow:0 0 0 3px rgba(255,138,61,.3)}
   .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .fielderr{color:#ff9a9d;font-size:12.5px;margin-top:6px;display:none}
   .field.bad input,.field.bad select{border-color:var(--red)}
@@ -93,8 +93,10 @@
 
   /* Результати */
   #results{display:none}
-  .myvote{font-size:14.5px;color:var(--mut);margin-bottom:16px}
-  .myvote b{color:var(--tx)}
+  .myvote{display:none;font-size:15.5px;color:#dfe4ee;margin-top:18px;padding:14px 16px;border-radius:14px;
+    background:rgba(34,224,123,.12);border:1.5px solid rgba(34,224,123,.4);text-align:center;line-height:1.5}
+  .myvote b{color:#fff}
+  .myvote .apt{display:inline-block;background:rgba(255,138,61,.28);color:#ffc48f;font-weight:800;font-size:17px;padding:2px 11px;border-radius:8px;margin:0 2px}
   .bars{display:flex;gap:18px;align-items:flex-end;height:240px;margin:18px 0 4px}
   .bar{flex:1;display:flex;flex-direction:column;align-items:center;height:100%}
   .barwrap{width:100%;flex:1;display:flex;align-items:flex-end;min-height:0}
@@ -196,12 +198,12 @@
     <div style="font-family:'Unbounded';font-weight:700;font-size:20px;margin-bottom:4px">Результати</div>
     <div id="resQ" style="font-weight:700;font-size:16px;color:#fff;line-height:1.3;margin-bottom:6px"></div>
     <div id="resDesc" style="color:#cdd3df;font-size:14px;line-height:1.55;margin-bottom:10px;white-space:pre-wrap"></div>
-    <div class="myvote" id="myvote"></div>
     <div id="cdResults" style="display:none;margin-bottom:14px;font-size:13.5px;font-weight:600;color:#ffd9b8;background:rgba(255,138,61,.12);border:1px solid rgba(255,138,61,.3);padding:9px 12px;border-radius:11px"></div>
     <div class="bars" id="bars"></div>
     <div class="total" id="total">Усього голосів: 0</div>
+    <div class="myvote" id="myvote"></div>
     <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line);text-align:center;color:#aab1c2;font-size:13.5px;line-height:1.5">
-      📣 Результати голосувань будуть оприлюднені в оголошеннях і в Telegram-каналі.
+      📣 Результати голосувань будуть оприлюднені на дошці оголошень будинку і в Telegram-каналі.
     </div>
   </div>
 
@@ -288,13 +290,12 @@ window.addEventListener('load',function(){
     }
     startCountdown(res.poll.ends_at);
     if(res.ended){
-      document.getElementById('myvote').innerHTML='<b>Голосування завершено.</b> Підсумкові результати:';
+      var mv=document.getElementById('myvote'); mv.style.display='block'; mv.innerHTML='🏁 <b>Голосування завершено.</b> Підсумкові результати нижче.';
       renderResults(res.results); return;
     }
     var v=null; try{v=JSON.parse(localStorage.getItem(voteKey()));}catch(e){}
     if(v&&v.choice!=null){
-      var lbl=CURRENT_OPTIONS[parseInt(v.choice,10)]||'';
-      document.getElementById('myvote').innerHTML='Ви вже проголосували (кв. <b>'+v.apt+'</b>): <b>'+escapeHtml(lbl)+'</b>. Дякуємо!';
+      showMyVote(v.apt, CURRENT_OPTIONS[parseInt(v.choice,10)], 'Ви вже проголосували');
       renderResults(res.results);
     } else {
       document.getElementById('rules').style.display='block';
@@ -370,11 +371,7 @@ document.getElementById('send').onclick=function(){
 function onVoteResult(res,apt){
   if(res.ok){
     try{localStorage.setItem(voteKey(),JSON.stringify({apt:apt,choice:sel}));}catch(e){}
-    var lbl=escapeHtml(CURRENT_OPTIONS[parseInt(sel,10)]||'');
-    var msg = CURRENT_MODE==='code'
-      ? 'Голос за кв. <b>'+apt+'</b> зараховано <b>анонімно</b>. Дякуємо!'
-      : 'Ваш голос (кв. <b>'+apt+'</b>): <b>'+lbl+'</b>. Дякуємо!';
-    document.getElementById('myvote').innerHTML=msg;
+    showMyVote(apt, CURRENT_OPTIONS[parseInt(sel,10)], 'Ваш голос');
     renderResults(res.results);
   }else{
     sending=false;document.getElementById('send').disabled=false;
@@ -383,6 +380,12 @@ function onVoteResult(res,apt){
   }
 };
 
+function showMyVote(apt, lbl, prefix){
+  var el=document.getElementById('myvote'); el.style.display='block';
+  var tail = CURRENT_MODE==='code' ? ' — голос зараховано <b>анонімно</b>'
+           : (lbl ? ': <b>'+escapeHtml(lbl)+'</b>' : '');
+  el.innerHTML='✅ '+prefix+' — квартира <span class="apt">'+escapeHtml(String(apt))+'</span>'+tail+'. Дякуємо!';
+}
 function renderResults(r){
   var t=r.total||0, by=(r&&r.by)||{};
   document.getElementById('form').style.display='none';

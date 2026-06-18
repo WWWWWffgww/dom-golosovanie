@@ -20,9 +20,9 @@
   .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;margin-bottom:16px}
   .auth{max-width:440px}
   label{display:block;font-size:13px;font-weight:600;color:var(--mut);margin:12px 0 6px}
-  input,select,textarea{width:100%;padding:14px 15px;border-radius:12px;border:1.5px solid rgba(255,255,255,.18);background:#222636;color:#fff;font-size:15.5px;font-family:inherit;outline:none;transition:.15s}
-  input::placeholder,textarea::placeholder{color:#9298ab}
-  input:focus,select:focus,textarea:focus{border-color:var(--warm);background:#262b3d;box-shadow:0 0 0 3px rgba(255,138,61,.22)}
+  input,select,textarea{width:100%;padding:14px 15px;border-radius:12px;border:2px solid rgba(255,255,255,.28);background:#2c3346;color:#fff;font-size:15.5px;font-family:inherit;outline:none;transition:.15s}
+  input::placeholder,textarea::placeholder{color:#aab1c5}
+  input:focus,select:focus,textarea:focus{border-color:var(--warm);background:#323a50;box-shadow:0 0 0 3px rgba(255,138,61,.3)}
   input:focus{border-color:var(--warm)}
   button{padding:12px 17px;border:0;border-radius:12px;background:linear-gradient(92deg,var(--warm),var(--warm2));color:#fff;font-weight:700;cursor:pointer;font-size:14px;font-family:inherit;white-space:nowrap}
   button.tg{background:linear-gradient(92deg,#2aabee,#229ed9)}
@@ -184,7 +184,7 @@
         <input id="newPollQ" placeholder="Напр.: Чи ставимо новий домофон?">
 
         <label style="display:block;font-size:13px;color:var(--mut);margin:10px 0 4px">Опис (необов'язково)</label>
-        <textarea id="newPollDesc" rows="3" placeholder="Деталі, умови, навіщо це голосування…" style="width:100%;padding:13px 14px;border-radius:12px;border:1.5px solid rgba(255,255,255,.18);background:#222636;color:#fff;font-size:15.5px;font-family:inherit;resize:vertical"></textarea>
+        <textarea id="newPollDesc" rows="3" placeholder="Деталі, умови, навіщо це голосування…" style="width:100%;padding:13px 14px;border-radius:12px;border:2px solid rgba(255,255,255,.28);background:#2c3346;color:#fff;font-size:15.5px;font-family:inherit;resize:vertical"></textarea>
 
         <label style="display:block;font-size:13px;color:var(--mut);margin:10px 0 4px">Варіанти відповідей</label>
         <div class="row" id="optPreset" style="margin-bottom:6px">
@@ -192,12 +192,12 @@
           <button class="tiny alt" data-opts="Так|Ні">Так / Ні</button>
           <button class="tiny alt" data-opts="За|Проти|Утримався">За / Проти / Утримався</button>
         </div>
-        <textarea id="newPollOpts" rows="3" placeholder="Кожен варіант — з нового рядка (від 2 до 8)" style="width:100%;padding:13px 14px;border-radius:12px;border:1.5px solid rgba(255,255,255,.18);background:#222636;color:#fff;font-size:15.5px;font-family:inherit;resize:vertical">Так
+        <textarea id="newPollOpts" rows="3" placeholder="Кожен варіант — з нового рядка (від 2 до 8)" style="width:100%;padding:13px 14px;border-radius:12px;border:2px solid rgba(255,255,255,.28);background:#2c3346;color:#fff;font-size:15.5px;font-family:inherit;resize:vertical">Так
 Ні
 Утримався</textarea>
 
         <label style="display:block;font-size:13px;color:var(--mut);margin:10px 0 4px">Тривалість</label>
-        <select id="newPollDur" style="width:100%;padding:13px 14px;border-radius:12px;border:1.5px solid rgba(255,255,255,.18);background:#222636;color:#fff;font-size:15.5px;font-family:inherit">
+        <select id="newPollDur" style="width:100%;padding:13px 14px;border-radius:12px;border:2px solid rgba(255,255,255,.28);background:#2c3346;color:#fff;font-size:15.5px;font-family:inherit">
           <option value="-1">Не змінювати термін (при редагуванні)</option>
           <option value="0">Без обмеження (закрию вручну)</option>
           <option value="1">1 день</option>
