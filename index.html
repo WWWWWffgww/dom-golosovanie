@@ -40,7 +40,7 @@
   .flame{width:9px;height:9px;border-radius:50%;background:var(--warm);box-shadow:0 0 12px 3px var(--warm);animation:pulse 1.6s ease-in-out infinite}
   @keyframes pulse{0%,100%{opacity:.6;transform:scale(.85)}50%{opacity:1;transform:scale(1.15)}}
 
-  h1{font-family:'Unbounded',sans-serif;font-weight:800;font-size:30px;line-height:1.12;margin:16px 0 8px;
+  h1{font-family:'Unbounded',sans-serif;font-weight:800;font-size:clamp(20px,6.4vw,32px);white-space:nowrap;line-height:1.12;margin:16px 0 8px;
     background:linear-gradient(92deg,#fff 30%,#ffb27a);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
   .info{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
   .chip{font-size:12.5px;color:var(--mut);background:rgba(255,255,255,.05);border:1px solid var(--line);
@@ -114,8 +114,25 @@
   <div class="badge"><span class="flame"></span> ЖБК «Метробудівник-3» · Голосування 2026</div>
   <h1>Резервне опалення</h1>
 
+  <!-- ПРАВИЛА -->
+  <div class="card" id="rules">
+    <div style="font-family:'Unbounded';font-weight:700;font-size:18px;margin-bottom:12px">Правила голосування</div>
+    <div style="font-size:15px;line-height:1.6;color:#cdd3df">
+      Це опитування для встановлення <b>резервного (електричного) опалення</b> у нашому газовому будинку
+      <b>ЖБК «Метробудівник-3»</b> — на випадок відключення газу взимку.
+      <div style="margin-top:14px;font-weight:700;color:#fff">Умови голосування:</div>
+      <ul style="margin:8px 0 0;padding-left:20px">
+        <li style="margin-bottom:7px">Голосувати має право <b>лише одна людина від однієї квартири</b> — бажано власник квартири або довірена особа.</li>
+        <li style="margin-bottom:7px"><b>Одна квартира — один голос.</b></li>
+        <li style="margin-bottom:7px"><b>Переголосувати не можна</b> — проголосувати можна лише один раз.</li>
+        <li>Для перевірки голосу зберігаються технічні дані (пристрій, IP, місцезнаходження).</li>
+      </ul>
+    </div>
+    <button class="go" id="rulesOk">Зрозуміло — перейти до голосування</button>
+  </div>
+
   <!-- ФОРМА -->
-  <div class="card" id="form">
+  <div class="card" id="form" style="display:none">
     <div style="font-family:'Unbounded';font-weight:700;font-size:18px;margin-bottom:4px">Чи потрібне нам резервне опалення?</div>
     <div style="color:var(--mut);font-size:13.5px">Одна квартира — один голос. Змінити голос не можна.</div>
 
@@ -194,10 +211,17 @@ var FIO_RE=/^[А-Яа-яЁёЇїІіЄєҐґ'’\-]{2,}(\s+[А-Яа-яЁёЇїІ
 function bad(id,on){document.getElementById(id).classList[on?'add':'remove']('bad');}
 function showMsg(t,c){var m=document.getElementById('msg');m.textContent=t;m.className='msg '+c;}
 
-// Якщо вже голосували з цього пристрою — показати результати
+// Кнопка "Зрозуміло" — сховати правила, показати форму
+document.getElementById('rulesOk').onclick=function(){
+  document.getElementById('rules').style.display='none';
+  document.getElementById('form').style.display='block';
+};
+
+// Якщо вже голосували з цього пристрою — одразу показати результати (без правил)
 window.addEventListener('load',function(){
   var v=null; try{v=JSON.parse(localStorage.getItem(VOTE_KEY));}catch(e){}
   if(v&&v.choice){
+    document.getElementById('rules').style.display='none';
     fetchResults(function(r){
       var L={yes:'Так',no:'Ні',abstain:'Утримався'};
       document.getElementById('myvote').innerHTML='Ви вже проголосували (кв. <b>'+v.apt+'</b>): <b>'+L[v.choice]+'</b>. Дякуємо!';
