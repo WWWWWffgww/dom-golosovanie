@@ -58,6 +58,7 @@
   .st-banned{background:rgba(255,90,95,.16);color:#ffb0b2}
   .scroll{overflow:auto;max-height:60vh;-webkit-overflow-scrolling:touch}
   .scroll table{min-width:520px}
+  .aptacts{display:inline-flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
   .vrow:hover{background:rgba(255,255,255,.03)}
   .vdetail td{background:rgba(255,138,61,.06);padding:8px 12px}
   .detgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 24px}
@@ -252,10 +253,15 @@
     </div>
 
     <div class="card">
-      <h2>Адміністратори</h2>
-      <div class="mut" style="margin-bottom:8px">Нові реєстрації неактивні, поки ви їх не підтвердите. Зайвих — банте.</div>
-      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-        <table id="adm" class="resp" style="min-width:520px"><thead><tr><th>Email</th><th>Статус</th><th>Створено</th><th>Дії</th></tr></thead><tbody></tbody></table>
+      <div id="admToggle" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer">
+        <h2 style="margin:0">Адміністратори <span id="admState" style="font-size:12px;font-weight:600;color:var(--mut)"></span></h2>
+        <span id="admChevron" style="color:var(--mut);font-size:18px">▸</span>
+      </div>
+      <div id="admBody" style="display:none;margin-top:12px">
+        <div class="mut" style="margin-bottom:8px">Нові реєстрації неактивні, поки ви їх не підтвердите. Зайвих — банте.</div>
+        <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+          <table id="adm" class="resp" style="min-width:520px"><thead><tr><th>Email</th><th>Статус</th><th>Створено</th><th>Дії</th></tr></thead><tbody></tbody></table>
+        </div>
       </div>
     </div>
 
@@ -639,6 +645,8 @@ function loadAdmins(){
   api('admin_list',{token:token()}).then(function(r){
     if(!r.ok)return;
     var meAd=r.admins.filter(function(a){return a.me;})[0]; if(meAd) document.getElementById('meBox').textContent='Ви: '+meAd.email;
+    var pend=r.admins.filter(function(a){return a.status==='pending';}).length;
+    document.getElementById('admState').innerHTML = '· '+r.admins.length+' всього' + (pend?' · <span style="color:#ffe39a">'+pend+' очікують</span>':'');
     var tb=document.querySelector('#adm tbody');tb.innerHTML='';
     r.admins.forEach(function(a){
       var st='<span class="st st-'+a.status+'">'+({active:'Активний',pending:'Очікує',banned:'Заблокований'}[a.status]||a.status)+'</span>';
@@ -710,11 +718,12 @@ function renderApartments(list){
     tr.innerHTML='<td data-label="Кв. №"><span style="display:inline-block;background:rgba(255,138,61,.18);color:#ffb27a;font-weight:800;font-size:16px;padding:3px 11px;border-radius:8px">'+x.apt_no+'</span></td>'+
       '<td data-label="Парадне">'+x.parade+'</td>'+
       '<td data-label="Поверх">'+x.floor+'</td>'+
-      '<td data-label="Код"><b class="codeval" style="display:inline-block;background:rgba(34,224,123,.14);color:#9ff0c2;font-size:19px;font-weight:800;letter-spacing:2px;padding:5px 13px;border-radius:9px;border:1px solid rgba(34,224,123,.3)">'+esc(x.code)+'</b> '+
-        '<button class="tiny alt" data-cp="'+esc(x.code)+'" title="Копіювати">📋</button> '+
-        '<button class="tiny alt" data-sh="'+x.apt_no+'~'+esc(x.code)+'" title="Поділитися">📤</button></td>'+
+      '<td data-label="Код"><b class="codeval" style="display:inline-block;background:rgba(34,224,123,.14);color:#9ff0c2;font-size:19px;font-weight:800;letter-spacing:2px;padding:5px 13px;border-radius:9px;border:1px solid rgba(34,224,123,.3)">'+esc(x.code)+'</b></td>'+
       '<td data-label="Оновлено" style="color:var(--mut)">'+(x.code_updated?fmt(x.code_updated):'—')+'</td>'+
-      '<td data-label="Дії"><button class="tiny ban" data-rg="'+x.id+'">Оновити</button></td>';
+      '<td data-label="Дії"><span class="aptacts">'+
+        '<button class="tiny alt" data-cp="'+esc(x.code)+'" title="Копіювати">📋</button>'+
+        '<button class="tiny alt" data-sh="'+x.apt_no+'~'+esc(x.code)+'" title="Поділитися">📤</button>'+
+        '<button class="tiny ban" data-rg="'+x.id+'">Оновити</button></span></td>';
     tb.appendChild(tr);
   });
   tb.querySelectorAll('button[data-cp]').forEach(function(b){ b.onclick=function(){ copyCode(b.dataset.cp,b); }; });
@@ -852,6 +861,11 @@ document.getElementById('tgToggle').onclick=function(){
   var b=document.getElementById('tgBody'), open=b.style.display!=='none';
   b.style.display=open?'none':'block';
   document.getElementById('tgChevron').textContent=open?'▸':'▾';
+};
+document.getElementById('admToggle').onclick=function(){
+  var b=document.getElementById('admBody'), open=b.style.display!=='none';
+  b.style.display=open?'none':'block';
+  document.getElementById('admChevron').textContent=open?'▸':'▾';
 };
 function loadTgSettings(){
   api('admin_get_settings',{token:token()}).then(function(r){
