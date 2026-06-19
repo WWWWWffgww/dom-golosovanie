@@ -340,80 +340,14 @@
 var SCRIPT_URL = 'https://dom-golosovanie.doctorlas.workers.dev';
 /* =================================================== */
 
-var DEMO = SCRIPT_URL.indexOf('ВСТАВ')>=0;
-var DEMO_SETUP_KEY = 'demo';
 var TOK_KEY='dom_admin_tok', L={yes:'Так',no:'Ні',abstain:'Утримався'};
 var DATA=null;
 
-/* ---------- API (реальний бекенд або тестова симуляція) ---------- */
+/* ---------- API (звернення до сервера) ---------- */
 function api(action,payload){
   payload=payload||{}; payload.action=action;
-  if(DEMO) return Promise.resolve(demoApi(action,payload));
   return fetch(SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)})
     .then(function(r){return r.json();}).catch(function(){return{ok:false,error:'Помилка зʼєднання'};});
-}
-
-/* ---------- Тестова симуляція (localStorage) ---------- */
-function dGet(k,def){try{return JSON.parse(localStorage.getItem(k))||def;}catch(e){return def;}}
-function dSet(k,v){localStorage.setItem(k,JSON.stringify(v));}
-function dAdmins(){return dGet('dom_admins',[]);}
-function dEmail(e){return String(e||'').trim().toLowerCase();}
-function find(e){var a=dAdmins();for(var i=0;i<a.length;i++)if(dEmail(a[i].email)===dEmail(e))return a[i];return null;}
-function dTally(){var v=dGet('dom_demo',[]),r={yes:0,no:0,abstain:0,total:0};v.forEach(function(x){if(r[x.choice]!=null)r[x.choice]++;});r.total=r.yes+r.no+r.abstain;return r;}
-function demoApi(a,p){
-  var email=dEmail(p.email), admins=dAdmins();
-  function find(e){for(var i=0;i<admins.length;i++)if(dEmail(admins[i].email)===dEmail(e))return admins[i];return null;}
-  if(a==='admin_status') return {ok:true,exists:admins.length>0};
-  if(a==='admin_setup'){
-    if(String(p.setupKey||'')!==DEMO_SETUP_KEY) return {ok:false,error:'Невірний код налаштування (тест: demo)'};
-    if(admins.length>0) return {ok:false,error:'Адміністратор вже створений'};
-    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return {ok:false,error:'Невірний email'};
-    if(String(p.password).length<6) return {ok:false,error:'Пароль мінімум 6 символів'};
-    admins.push({email:email,password:p.password,status:'active',created:new Date().toISOString()});dSet('dom_admins',admins);
-    return {ok:true,token:email,me:{email:email,status:'active'}};
-  }
-  if(a==='admin_register'){
-    if(admins.length===0) return {ok:false,error:'Спочатку перший адміністратор'};
-    if(find(email)) return {ok:false,error:'Такий email вже зареєстрований'};
-    if(String(p.password).length<6) return {ok:false,error:'Пароль мінімум 6 символів'};
-    admins.push({email:email,password:p.password,status:'pending',created:new Date().toISOString()});dSet('dom_admins',admins);
-    return {ok:true,pending:true};
-  }
-  if(a==='admin_login'){
-    var u=find(email);
-    if(!u) return {ok:false,error:'Невірний email або пароль'};
-    if(u.status==='banned') return {ok:false,error:'Доступ заборонено'};
-    if(u.status==='pending') return {ok:false,error:'Акаунт очікує підтвердження першим адміністратором'};
-    if(u.password!==p.password) return {ok:false,error:'Невірний email або пароль'};
-    return {ok:true,token:email,me:{email:email,status:'active'}};
-  }
-  if(a==='admin_recover_request'){
-    var u2=find(email); if(u2&&u2.status!=='banned'){var code=(''+Math.floor(100000+Math.random()*900000));dSet('dom_rec',{email:email,code:code});return {ok:true,demoCode:code};}
-    return {ok:true};
-  }
-  if(a==='admin_recover_confirm'){
-    var rec=dGet('dom_rec',{}),u3=find(email);
-    if(!u3||rec.email!==email||String(rec.code)!==String(p.code)) return {ok:false,error:'Невірний код'};
-    if(String(p.password).length<6) return {ok:false,error:'Пароль мінімум 6 символів'};
-    u3.password=p.password;dSet('dom_admins',admins);localStorage.removeItem('dom_rec');
-    return {ok:true,token:(u3.status==='active'?email:''),status:u3.status};
-  }
-  // потрібен токен (активний)
-  var me=find(p.token);
-  if(!me||me.status!=='active') return {ok:false,error:'Потрібен вхід',needLogin:true};
-  if(a==='admin_data'){
-    var v=dGet('dom_demo',[]);
-    return {ok:true,question:'Чи потрібне нам резервне опалення?',results:dTally(),me:{email:me.email},
-      rows:v.map(function(x){return{time:x._t||'',apt:x.apt,place:x.place,fio:x.fio,phone:x.phone,choice:x.choice,ip:x.ip,ipCity:x.ipCity,ipRegion:x.ipRegion,ipCountry:x.ipCountry,lat:x.lat,lon:x.lon,acc:x.acc,device:x.device,ua:x.ua};})};
-  }
-  if(a==='admin_publish') return {ok:true,demo:true};
-  if(a==='admin_list') return {ok:true,admins:admins.map(function(x){return{email:x.email,status:x.status,created:x.created,me:dEmail(x.email)===dEmail(me.email)};})};
-  if(a==='admin_approve'||a==='admin_ban'||a==='admin_unban'){
-    var t=find(p.target); if(!t) return {ok:false,error:'Не знайдено'};
-    if(dEmail(t.email)===dEmail(me.email)) return {ok:false,error:'Не можна змінювати власний статус'};
-    t.status=(a==='admin_ban')?'banned':'active'; dSet('dom_admins',admins); return {ok:true};
-  }
-  return {ok:false,error:'Невідома дія'};
 }
 
 /* ---------- навігація екранами ---------- */
@@ -442,7 +376,6 @@ document.getElementById('suGo').onclick=function(){
     if(r.ok){setToken(r.token);loadPanel();}else setMsg('suMsg',r.error,'err');
   });
 };
-if(DEMO) document.getElementById('setupHint').innerHTML='🧪 Тестовий режим. Код налаштування: <b>demo</b>. Вигадайте email і пароль — це буде головний адміністратор.';
 
 /* ---------- вхід ---------- */
 document.getElementById('liGo').onclick=function(){
@@ -476,8 +409,7 @@ document.getElementById('rc1Go').onclick=function(){
   api('admin_recover_request',{email:e}).then(function(r){
     document.getElementById('rc1Go').disabled=false;
     document.getElementById('rc2Code').dataset.email=e;
-    if(r.demoCode){setMsg('rc1Msg','🧪 Тестовий код: '+r.demoCode+' (у реальному режимі прийде на email)','info');}
-    else setMsg('rc1Msg','Якщо email існує — код надіслано на пошту.','ok');
+    setMsg('rc1Msg','Якщо email існує — код надіслано на пошту.','ok');
     setTimeout(function(){show('scrRec2');},900);
   });
 };
@@ -874,7 +806,6 @@ document.getElementById('tgPublish').onclick=function(){
   b.disabled=true;
   api('admin_publish',{token:token(),poll_id:DATA.poll.id}).then(function(res){
     b.disabled=false;
-    if(res.demo){ alert('🧪 Тестовий режим — реально не надіслано.\nПісля підключення бекенду й бота повідомлення піде в канал. Текст:\n\n'+tgPreview()); return; }
     if(res.ok) alert('✅ Опубліковано в Telegram-канал.');
     else alert('Помилка: '+(res.error||'не вдалося надіслати'));
   });

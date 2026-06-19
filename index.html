@@ -218,13 +218,7 @@ var SCRIPT_URL = 'https://dom-golosovanie.doctorlas.workers.dev';
 var MAX_APT = 240; // 6 парадних × 10 поверхів × 4 кв.
 var VOTE_KEY = 'dom_vote_v2';
 
-// Тестовий режим: поки не вставлено справжній URL — голоси зберігаються лише в браузері
-var DEMO = SCRIPT_URL.indexOf('ВСТАВ') >= 0;
-function demoAll(){try{return JSON.parse(localStorage.getItem('dom_demo')||'[]');}catch(e){return[];}}
-function demoTally(){var a=demoAll(),r={yes:0,no:0,abstain:0,total:0};a.forEach(function(v){if(r[v.choice]!=null)r[v.choice]++;});r.total=r.yes+r.no+r.abstain;return r;}
-function demoVote(p){var a=demoAll();for(var i=0;i<a.length;i++){if(a[i].apt===p.apt)return{ok:false,error:'Квартира № '+p.apt+' вже проголосувала (тестовий режим).',results:demoTally()};}p._t=new Date().toISOString();a.push(p);localStorage.setItem('dom_demo',JSON.stringify(a));return{ok:true,results:demoTally()};}
-function sendVote(p){return DEMO?Promise.resolve(demoVote(p)):fetch(SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(p)}).then(function(r){return r.json();});}
-if(DEMO){window.addEventListener('load',function(){var d=document.createElement('div');d.style.cssText='background:rgba(255,197,61,.14);border:1px solid rgba(255,197,61,.4);color:#ffe39a;font-size:12.5px;padding:11px 13px;border-radius:12px;margin:10px 0';d.textContent='🧪 Тестовий режим: бекенд ще не підключено. Голоси зберігаються лише у вашому браузері (для перевірки роботи).';var f=document.getElementById('form');f.insertBefore(d,f.children[2]);});}
+function sendVote(p){return fetch(SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(p)}).then(function(r){return r.json();});}
 
 var sel=null, CURRENT_OPTIONS=[];
 var PALETTE=['#22e07b','#ff5a5f','#ffc53d','#3b82f6','#a479e2','#ff8a3d','#2aabee','#f06292'];
@@ -303,7 +297,6 @@ window.addEventListener('load',function(){
   }).catch(function(){ document.getElementById('nopoll').style.display='block'; });
 });
 function fetchResults(cb){
-  if(DEMO){cb(demoTally());return;}
   fetch(SCRIPT_URL).then(function(r){return r.json();}).then(function(res){if(res.ok)cb(res.results);}).catch(function(){});
 }
 
