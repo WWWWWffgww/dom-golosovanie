@@ -107,10 +107,10 @@
     table.resp td{border:0;padding:6px 0;display:flex;justify-content:space-between;gap:14px;text-align:right;font-size:13.5px}
     table.resp td::before{content:attr(data-label);color:var(--mut);font-weight:600;text-align:left;flex:0 0 40%;white-space:nowrap}
     table.resp td:empty{display:none}
-    /* ячейки с кнопками/кодом — на всю ширину, контент в одну строку */
-    table.resp td.wfull{flex-direction:column;align-items:stretch;white-space:normal}
-    table.resp td.wfull::before{flex:none;text-align:left;margin-bottom:8px}
-    table.resp td.wfull .tacts,table.resp td.wfull .codecell{width:100%;justify-content:flex-start}
+    /* ячейки с кнопками/кодом — мітка зліва, значення справа, в ОДИН рядок */
+    table.resp td.wfull{align-items:center;white-space:normal}
+    table.resp td.wfull::before{flex:0 1 auto;white-space:nowrap}
+    table.resp td.wfull .tacts,table.resp td.wfull .codecell{justify-content:flex-end;flex-wrap:nowrap}
     table.resp .vdetail td{display:block !important}
     table.resp .vdetail td::before{content:none !important}
   }
